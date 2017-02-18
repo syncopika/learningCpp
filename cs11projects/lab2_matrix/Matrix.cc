@@ -122,6 +122,9 @@ bool Matrix::equals(Matrix &m){
 				}
 			}
 		}
+	}else{
+		// if matchrows != matchCols
+		return false;
 	}
 	return true;
 }

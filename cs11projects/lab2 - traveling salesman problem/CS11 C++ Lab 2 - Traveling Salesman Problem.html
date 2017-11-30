@@ -1,0 +1,224 @@
+
+<!-- saved from url=(0071)http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab2/index.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>CS11 C++ Lab 2 - Traveling Salesman Problem</title>
+</head>
+
+<body>
+
+<h2>CS11 C++ Lab 2 - Traveling Salesman Problem</h2>
+
+<p>
+In this assignment you will start using the C++ Standard Template library to
+implement a solution to the very well-known
+<a href="https://en.wikipedia.org/wiki/Travelling_salesman_problem">Traveling
+Salesman Problem</a>.
+</p>
+
+<p>
+You will need to write a program in the file <tt>tsp.cc</tt> that runs as
+follows:
+</p>
+
+<pre>  How many points?  <em>5</em>
+  Point 0:  <em>9 0 3</em>
+  Point 1:  <em>4 4 2</em>
+  Point 2:  <em>6 7 3</em>
+  Point 3:  <em>1 9 5</em>
+  Point 4:  <em>8 6 3</em>
+  Best order:  [0 1 3 2 4]
+  Shortest distance:  27.1016</pre>
+
+<p>
+(The parts in italics are the user's input.  For simplicity, we start all of
+our numbering from 0.)
+</p>
+
+<p>
+What the above output is saying, is that for the above five points, if they
+are visited in the printed order, the path will only be ~27.1 units long, and
+this is the shortest path that includes all five points.
+</p>
+
+<p>
+This turns out to be a very straightforward program to write, using the STL's
+<a href="http://en.cppreference.com/w/cpp/container/vector"><tt>std::vector</tt></a>
+data type.  Also, you should use your <tt>Point</tt> class from last week to
+represent the individual 3D points in the inputs.  Finally, you should pass
+<tt>const</tt>-references as arguments to the functions specified below; this
+will require you to update your <tt>Point</tt> class with <tt>const</tt>
+specifications where required.
+</p>
+
+<ul>
+<li>The <tt>std::vector</tt> class is declared in the <tt>&lt;vector&gt;</tt>
+    C++ standard header.</li>
+<li>You will need to use one of the STL algorithms specified below; these are
+    declared in the <tt>&lt;algorithm&gt;</tt> C++ standard header.</li>
+</ul>
+
+<p>
+Here are functions you must write to implement this program:
+</p>
+
+<dl>
+
+<dt><tt>double circuitLength(const vector&lt;Point&gt; &amp;points, const vector&lt;int&gt; &amp;order)</tt></dt>
+<dd>
+  <p>
+  This function takes a vector of points, and the order in which those points
+  are visited, and it computes the total length of the path when the points
+  are traveled in the specified order.  Note that the path must be a complete
+  round trip!  For example, if the <tt>order</tt> vector is <tt>[3, 1, 2, 0]</tt>,
+  the total distance will include these components:
+  </p>
+  <ul>
+    <li>The distance from <tt>points[3]</tt> to <tt>points[1]</tt></li>
+    <li>The distance from <tt>points[1]</tt> to <tt>points[2]</tt></li>
+    <li>The distance from <tt>points[2]</tt> to <tt>points[0]</tt></li>
+    <li>The distance from <tt>points[0]</tt> to <tt>points[3]</tt></li>
+  </ul>
+</dd>
+
+<dt><tt>vector&lt;int&gt; findShortestPath(const vector&lt;Point&gt; &amp;points)</tt></dt>
+<dd>
+  <p>
+  This function takes a vector of points, and returns a vector that specifies
+  the order to visit all of the points in a single round trip, visiting each
+  point once, to ensure that the trip is as short as possible.  This is the
+  function that will solve the Traveling Salesman Problem.  Of course,
+  we will write a simple brute-force solution that will work for a small
+  number of points, but it will be too slow for a large number of points.
+  </p>
+  
+  <p>
+  The function can operate in this way:
+  </p>
+  
+  <ul>
+    <li>Set up a <tt>vector&lt;int&gt;</tt> variable that holds the order in
+        which the points will be visited.  Initially, the order can simply be
+        [0, 1, ..., N-1], where N is the size of the <tt>points</tt> vector.</li>
+    <li>You can compute the distance of this path and store it in a "shortest
+        distance" variable, along with another variable that holds the "best
+        path found so far" (it will also be a <tt>vector&lt;int&gt;</tt>).</li>
+    <li>Next, the function can use the STL algorithm
+        <a href="http://en.cppreference.com/w/cpp/algorithm/next_permutation">
+        <tt>bool next_permutation(Iterator first, Iterator last)</tt></a> to
+        iterate through all permutations of your order-vector.  For each
+        permutation, the loop can compute the total distance traveled for
+        the permutation.  If the distance is shorter than the current
+        "shortest distance," then the loop has found a new "best path."</li>
+    <li>Finally, the function can return the best order it found in its
+        loop.</li>
+  </ul>
+
+  <p>
+  The <tt>next_permutation()</tt> algorithm generates permutations in
+  <em>lexicographic order</em>.  This terminology draws from permuting the
+  characters in a string, where "lexicographic order" simply means
+  alphabetical order.  For example, given the string "abc", you can order the
+  permutations alphabetically as follows:
+  </p>
+  
+  <ul>
+    <li>abc</li>
+    <li>acb</li>
+    <li>bac</li>
+    <li>bca</li>
+    <li>cab</li>
+    <li>cba</li>
+  </ul>
+
+  <p>
+  Similarly, with our <tt>order</tt> vector, [0 1 2 ... N-2 N-1 N] is
+  considered to be lexicographically "first" in the sequence of
+  permutations.  The next one is [0 1 2 ... N-2 N N-1], and so forth.  The
+  "last" permutation is [N N-1 N-2 ... 1 0].
+  </p>
+  
+  <p>
+  The important detail is that when <tt>next_permutation()</tt> "wraps around"
+  from the lexicographically "last" permutation to the "first" permutation,
+  it will return <tt>false</tt>; for all other permutations it will return
+  <tt>true</tt>.  Therefore, your function can continue to iterate through
+  permutations until <tt>next_permutation()</tt> returns <tt>false</tt>.
+  </p>
+  
+  <p>
+  You will find that this implementation slows down very quickly as the
+  number of points increases.  There are various ways you can improve the
+  performance of this function, but you can use the above-described
+  approach to find the answer.
+  </p>
+</dd>
+
+<dt><tt>int main()</tt></dt>
+
+<dd>
+  <p>
+  This function will be pretty straightforward to write.  It should follow
+  the example output specified earlier:  prompt the user for a number of
+  points, then prompt for each point in turn.  The points should be collected
+  into an STL vector.  Then, the <tt>main()</tt> function can call the
+  <tt>findShortestPath()</tt> function to get the shortest path that visits
+  all points once.  Finally, the program should print out the path found, and
+  the total length of the path.
+  </p>
+
+  <p>
+  Again, you should carefully follow the outputs shown earlier, so that we
+  can automate the grading of your program.
+  </p>
+</dd></dl>
+
+<p>
+You can compile your program similar to last time:  <tt>g++ -std=c++14 -Wall tsp.cc Point.cc -o tsp</tt>
+</p>
+
+<h3>Testing</h3>
+
+<p>
+When you are ready to try your program, you can test it with some simple test
+files provided below.  Just download the various test files, and then run
+your <tt>tsp</tt> program against them:
+</p>
+
+<pre>  tsp &lt; test1.txt</pre>
+
+<p>
+This will feed the file's contents into your program as if you had typed it.
+</p>
+
+<p>
+Note that your program's output might be slightly different from the given
+output:  your path might start at a different point, and it may go in the
+opposite order from the output given below.  Also, the computed distance may
+be off by a <em>very</em> small amount; this is fine.
+</p>
+
+<ul>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab2/test-2.txt"><tt>test-2.txt</tt></a> - 2 points; shortest path is
+    [0 1]; shortest distance is 14.1421</li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab2/test-5.txt"><tt>test-5.txt</tt></a> - 5 points; shortest path is
+    [0 1 3 2 4]; shortest distance is 27.1016</li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab2/test-8.txt"><tt>test-8.txt</tt></a> - 8 points; shortest path is
+    [4 3 2 5 1 6 0 7]; shortest distance is 34.1513</li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab2/test-10.txt"><tt>test-10.txt</tt></a> - 10 points; shortest path is
+    [0 3 5 1 6 9 4 2 8 7]; shortest distance is 42.5904</li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab2/test-12.txt"><tt>test-12.txt</tt></a> - 12 points (LONG); shortest path is
+    [2 6 4 1 11 10 9 0 5 7 3 8]; shortest distance is 47.6887</li>
+</ul>
+
+<h3>Finished!</h3>
+
+When you are finished, submit these files on csman:
+
+<ul>
+<li>Your <tt>tsp.cc</tt> file</li>
+<li>Your <tt>Point.hh</tt> and <tt>Point.cc</tt> files updated with <tt>const</tt></li>
+</ul>
+
+
+
+</body></html>

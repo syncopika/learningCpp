@@ -1,0 +1,257 @@
+
+<!-- saved from url=(0061)http://users.cms.caltech.edu/~donnie/cs11/cpp/lab2/index.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+  <title>CS11 C++ - Lab 2</title>
+</head>
+
+<body>
+
+<h3>C++ Lab 2:  Matrix Madness</h3>
+<i>Constructors, destructors, and dynamic memory management!</i>
+<!--
+<br />
+<b>Due Thursday, January 25, 12:00pm.</b>
+-->
+
+<hr>
+
+<p>
+  This week you'll design and implement a C++ class which can be used to
+  represent and manipulate integer matrices.
+</p>
+
+<h4>What you need to do:</h4>
+
+<p>
+  Define a class called <tt>Matrix</tt> which handles all of the
+  operations illustrated in the example "user's code" below:
+</p>
+
+<pre>#include &lt;iostream&gt;
+#include "Matrix.hh"
+
+using namespace std;
+
+int main() {
+
+  // Create a new matrix with two rows and three columns
+  Matrix a(2, 3);
+
+  // Print out some information about the size of this matrix:
+  cout &lt;&lt; "Matrix a is " &lt;&lt; a.getrows() &lt;&lt; " rows tall." &lt;&lt; endl;
+  cout &lt;&lt; "Matrix a is " &lt;&lt; a.getcols() &lt;&lt; " columns wide." &lt;&lt; endl;
+
+  // Print out the contents of this matrix (should be all zeroes!):
+  for(int r = 0; r &lt; a.getrows(); r++) {
+    for(int c = 0; c &lt; a.getcols(); c++) {
+      cout &lt;&lt; "Element (" &lt;&lt; r &lt;&lt; ", " &lt;&lt; c &lt;&lt; ") = " &lt;&lt; a.getelem(r,c) &lt;&lt; endl;
+    }
+  }
+
+  // Fill in a few values
+  a.setelem(1, 2, -5280);  // bottom right element is now -5280
+  a.setelem(0, 1, 123);    // top center element is now 123
+
+  // Create an identical copy of this matrix
+  Matrix b = a;
+
+  // Change the original matrix some more
+  a.setelem(1, 2, 555);  // bottom right element is now 555
+
+  // Examine some elements of each matrix
+  cout &lt;&lt; "(1,2) of a = " &lt;&lt; a.getelem(1,2) &lt;&lt; " [should be 555]" &lt;&lt; endl;
+  cout &lt;&lt; "(1,2) of b = " &lt;&lt; b.getelem(1,2) &lt;&lt; " [should be -5280]" &lt;&lt; endl;
+
+  // So if a and b are different, let's copy a into a new matrix and add b to it:
+  Matrix c = a;
+  c.add(b);
+
+  // Now let's copy c into another new matrix and subtract a from it:
+  Matrix d = c;
+  d.subtract(a);
+
+  // Hmm...  that means d should be b, no?
+  if (d.equals(b)) {
+    cout &lt;&lt; "Yay!  d = b!" &lt;&lt; endl;
+  } else {
+    cout &lt;&lt; "Uh-oh!  Something went wrong; d isn't b!" &lt;&lt; endl;
+  }
+
+  // Let's create a tiny 0 by 0 matrix using the default constructor:
+  Matrix e;
+  cout &lt;&lt; "0x0 matrix e is " &lt;&lt; e.getrows() &lt;&lt; " by " &lt;&lt; e.getcols() &lt;&lt; endl;
+
+  // Of course, e and d are different, since they have different sizes!
+  if (!e.equals(d)) {
+    cout &lt;&lt; "e and d are indeed different!" &lt;&lt; endl;
+  } else {
+    cout &lt;&lt; "Oh well, back to the drawing board...." &lt;&lt; endl;
+  }
+
+  // Okay, enough of this; destroy all those matrices and end the program!
+  return 0;
+}
+</pre>
+
+<p>
+  (You can get the above file here:
+  <a href="http://users.cms.caltech.edu/~donnie/cs11/cpp/lab2/simplematrixtest.cc"><tt>simplematrixtest.cc</tt></a>)
+</p>
+
+<p>
+  Got all that?  Here's a quick summary:
+</p>
+
+<ul>
+  <li>A class declaration provided in <tt>Matrix.hh</tt></li>
+  <li>
+    The class must be called <tt>Matrix</tt> (implementation should be in
+    <tt>Matrix.cc</tt>)
+  </li>
+  <li>The matrix has <u>integer</u> elements</li>
+  <li>The default constructor creates a 0 by 0 matrix</li>
+  <li>
+    The two-argument constructor creates an all-zero matrix of the specified
+    size
+  </li>
+  <li>
+    The copy constructor creates a new, independent copy of a matrix<br>
+    (Changing the original shouldn't alter the copy, or vice versa!)
+  </li>
+  <li>The destructor frees any memory used by the matrix</li>
+  <li>
+    Arithmetic methods <tt>add</tt> and <tt>subtract</tt> that mutate the
+    instance upon which they're called
+  </li>
+  <li>A comparison method called <tt>equals</tt></li>
+  <li>
+    Accessor methods <tt>getrows</tt>, <tt>getcols</tt> and <tt>getelem</tt>
+  </li>
+  <li>A mutator method <tt>setelem</tt></li>
+</ul>
+
+<h4>Dealing With Abuse</h4>
+
+<p>
+  Whether it's arithmetic with matrices of incompatible sizes, or a simple
+  attempt to create a matrix with a negative number of columns, sooner or later,
+  someone will try to do something stupid with your matrix class.  The question
+  is, what should you do about it?
+</p>
+
+<p>
+  There are actually several ways to handle such situations, but for this lab
+  you should employ <b>assertions</b> to ensure that your class is used
+  properly.  Also note that when you are checking inputs, it's not sufficient to
+  only guard a few member functions.  That's like locking the front door of a
+  house, but leaving the back door wide open.  So, <b>make sure you write
+  checks for <em>every</em> member function that could receive invalid
+  inputs.</b>  Don't leave any holes in your code, because eventually they
+  will come back to bite you.
+</p>
+
+<!--
+<p>
+  A good rule of thumb is that if you think that something <i>should never
+  happen</i> in a correctly-written program, an assertion is best.  Assertions
+  are for catching <u>bugs</u> in your program.  When an assertion fails, it
+  means that there is probably a bug in your program!
+</p>
+
+<p>
+  If something bad <i>could legitimately happen</i> during the execution of your
+  program, then you definitely should consider the other options listed above.
+  For example, it is not a programming bug if the user enters bad data when your
+  program asks for a number.  Nor is it a programming bug if you try to allocate
+  memory and the operating system says there isn't enough space!  These kinds of
+  error conditions should not be tested with an assertion; they should be
+  handled in a much more graceful manner that allows for recovery.
+</p>
+
+<p>
+  It takes experience and practice to figure out which issues fall into the
+  category of bugs, and which fall into the category of valid (albeit ill-fated)
+  execution scenarios.  All you can do is to use your own judgement, and learn
+  from your experiences over time.  But what is <i>not</i> acceptable is to do
+  nothing!  Then it will be very difficult to keep your programs free of
+  defects!
+</p>
+-->
+
+<p>
+  A quick example of using C's <tt>assert</tt> in a C++ program:
+</p>
+
+<pre>    // Use the C++ name for the Standard C header assert.h
+    #include &lt;cassert&gt;
+
+    float mySqrt(float x) {
+      assert(x &gt;= 0);
+
+      // compute the square root
+      ...
+
+      return answer;
+    }</pre>
+
+<h4>Testing Your Class</h4>
+
+<p>
+  For now, use the program above (or one of your own design) to test out all of
+  the methods of your class.  We will be expanding on our <tt>Matrix</tt> class
+  next week and we'll give you a more comprehensive test suite then.
+</p>
+
+<p>To compile the lab, use this command:</p>
+
+<pre>    g++ -Wall simplematrixtest.cc Matrix.cc -o simplematrixtest</pre>
+
+<p>
+  Any warning or error messages you may see will most likely be due to problems
+  in your class declaration or implementation.  If you can't figure out the
+  problem reasonably quickly, ask for help!  You should attempt to fix all
+  warnings and errors before proceeding.
+</p>
+
+<p>
+  Please bear in mind that <tt>simplematrixtest</tt> cannot and will not test
+  everything.  Just because it doesn't turn up any problems doesn't mean that
+  none exist.  There are also many areas (error handling, coding style, class
+  design) which an automated program can only test in a very limited fashion, if
+  at all.  Remember that the quality of your entire program, not just the output
+  of one test, is what matters.
+</p>
+
+<h4>Anything Else?</h4>
+
+<p>
+  Between this page, the provided test program, and the material from lecture,
+  you should have a pretty good idea of what your class needs to do and what its
+  public interface needs to look like.  How you choose to implement these
+  features is up to you.  If you're not sure where to start, ask for help.
+</p>
+
+<p>
+  In general, be very careful about adding extra features such as different
+  operators, alternate constructors, or new methods to your class.  Though you
+  are not prohibited from doing so, you should think hard before expanding your
+  class's public interface.  It's often the case that adding too many "features"
+  to a class will actually make it more difficult to use or maintain, especially
+  if the new methods expose too many of the details of your class's internal
+  implementation.  The KISS principle is often invoked when making
+  software-design decisions:  "Keep It Simple, Stupid!"  It's the best way to
+  avoid unnecessary headaches.
+</p>
+
+<hr>
+
+<font size="-1">
+  [end lab 2]
+  Updated January 21, 2008.
+  Copyright (C) 2004-2008 California Institute of Technology.
+</font>
+
+
+
+
+</body></html>

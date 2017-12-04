@@ -1,0 +1,455 @@
+
+<!-- saved from url=(0071)http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab3/index.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>CS11 C++ Lab 3 - TSP GA</title>
+</head>
+
+<body>
+
+<h2>Traveling Salesman Problem - Genetic Algorithms</h2>
+
+<p>
+For this assignment you will create a version of your Traveling Salesman
+Problem solver that uses genetic algorithms (GAs) instead of a brute-force
+approach.  Genetic algorithms allow you to explore many different solutions
+at the same time, and the better solutions quickly percolate to the top of
+the population, where they will hopefully produce even better solutions.
+(Genetic algorithms have even been used to
+<a href="https://en.wikipedia.org/wiki/Evolved_antenna">design communications
+antennas for space missions</a>!)
+
+</p><p>
+In the context of the Traveling Salesman Problem, the only drawback of
+genetic algorithms is that we know they will produce a <em>good</em>
+solution, but we can't assert that it is the <em>best</em> solution (unless
+we already know what the best solution is, of course).  But, we can get to a
+good solution surprisingly rapidly with GAs.
+</p>
+
+<p>
+You will definitely want to cannibalize your code from last assignment!  You
+can definitely reuse some of last week's work to complete this week's lab.
+</p>
+
+<h3>Approach</h3>
+
+<p>
+The general approach of genetic algorithms is straightforward.  The most
+important part is to come up with some way of representing solutions to the
+problem as a sequence of values.  This becomes the "genome" for a large
+population of "creatures" or "individuals," each which has its own set of
+values that specifies a potential solution to the problem being solved.
+</p>
+
+<p>
+All members of the population are scored using a "fitness function" that
+assigns a numeric value to how "good" each individual's solution is.  Then,
+the best solutions are used to generate a new population that combines the
+features of the previous population's best solutions.  Finally, the genetic
+material of individuals in the population are "mutated" in some random way,
+so that even more interesting solutions can be explored by the GA.
+</p>
+
+<p>
+For our TSP solver, we will use the visit-order as the genome for the
+individuals in our population.  For example, with a problem of 8 points, a
+genome might be <tt>[5 2 0 4 7 1 3 6]</tt>, specifying the order that the
+points are visited.  The fitness function is simple:  it is just the length
+of the circuit formed by visiting the points in the specified order.
+Individuals with "better" or "fitter" genomes will have a shorter path;
+"worse" or "less fit" individuals will specify a longer path.
+</p>
+
+<h3>TSP Genomes</h3>
+
+<p>
+The first thing you will need to write for your solver is a
+<tt>TSPGenome</tt> class that can represent one possible solution to a
+Traveling Salesman Problem.  Create the class declaration in a file
+<tt>tsp-ga.hh</tt>, and put the definitions in <tt>tsp-ga.cc</tt>.  (Make
+sure to comment everything clearly, as usual.)
+</p>
+
+The class should have two data members:
+
+<ul>
+<li>An STL vector of integers, specifying the order that the points in the
+    problem will be visited.</li>
+<li>A <tt>double</tt> that will hold the "circuit length" - the total
+    distance covered if the points are visited in a circuit, in the specified
+    order.</li>
+</ul>
+
+The genome will need a few simple operations:
+
+<ul>
+<li>
+  <p>
+  A <tt>TSPGenome(int numPoints)</tt> constructor that takes the number of
+  points that will be visited, and generates a random order to visit those
+  points.  The constructor can simply push the numbers <tt>[0 1 2 3 ...
+  numPoints-1]</tt> into a vector, and then use the
+  <a href="http://en.cppreference.com/w/cpp/algorithm/random_shuffle"><tt>random_shuffle()</tt></a>
+  algorithm to randomly permute the vector.
+  </p>
+  
+  <p>
+  The circuit length should be initialized to some dummy value, such as -1,
+  or perhaps a very large number like 10<sup>9</sup> (this can be written in
+  C and C++ as <tt>1e9</tt>).
+  </p>
+</li>
+
+<li>
+  <p>
+  A <tt>TSPGenome(const vector&lt;int&gt; &amp;order)</tt> constructor that
+  initializes the genome from the specified visit order.
+  </p>
+
+  <p>
+  Again, the circuit length should be initialized to the same dummy value
+  that is used in the other constructor.
+  </p>
+</li>
+
+<li>
+  <p>
+  A member function <tt>vector&lt;int&gt; getOrder() const</tt> that returns
+  the genome's current visit order.
+  </p>
+</li>
+
+<li>
+  <p>
+  A member function <tt>computeCircuitLength</tt> that takes a
+  const-reference to a vector of points, and computes the circuit length from
+  traversing the points in the order specified in the object.  This value
+  should be stored in the object.  The function doesn't need to return
+  anything.
+  </p>
+  
+  <p>
+  (You can use your code from last week to implement this function.)
+  </p>
+</li>
+
+<li>
+  <p>
+  Another member function <tt>getCircuitLength</tt> that returns the circuit
+  length.  Since the function doesn't change the object it's called on, it
+  should also be marked <tt>const</tt>.
+  </p>
+</li>
+</ul>
+
+<h3>Mutating and Crosslinking Genomes</h3>
+
+<p>
+In order to build an effective genetic algorithm, you must also provide some
+way to mutate the genes of an individual in the population.  (This allows the
+GA to explore additional solutions beyond what is currently captured in the
+population.)  Additionally, the "best" individuals need to be able to
+reproduce, so you will need to implement a mechanism to produce an offspring
+from two parents.
+</p>
+
+<ul>
+<li>
+  <p>
+  The mutation operation is very easy to implement.  Write another member
+  function for your <tt>TSPGenome</tt> class called <tt>mutate()</tt>, that
+  mutates the genome by swapping two randomly-selected values in the order
+  vector.  The indexes of the values can be chosen using the <tt>rand()</tt>
+  function from the <tt>&lt;cstdlib&gt;</tt> library; this function generates
+  random integers.  You can produce a suitable value with the expression
+  <tt>rand() % order.size()</tt>, which will generate a random value in the
+  range [0, <em>size</em>-1].
+  </p>
+  <p>
+  Your implementation should choose two <em>different</em> indexes to swap.
+  This is easy enough; just loop as long as the second value is the same as
+  the first value.
+  </p>
+</li>
+
+<li>
+  <p>
+  Offspring should be generated by a function with the signature
+  <tt>TSPGenome crosslink(const TSPGenome &amp;g1, const TSPGenome &amp;g2)</tt>.
+  <b>This is not a member function; it should exist outside of the
+  <tt>TSPGenome</tt> class.</b>
+  </p>
+
+  <p>
+  An easy way to implement this function is given in the lecture slides.
+  Create a new <tt>vector&lt;int&gt;</tt> to hold the new offspring's order.
+  Choose a random index <tt>i = rand() % g1.getOrder().size()</tt>. Then,
+  copy <tt>g1</tt>'s order-values at indexes [0, i-1] to the new vector.
+  Finally, iterate through <tt>g2</tt>'s <em>entire</em> vector, copying each
+  value to the new result vector, as long as it doesn't already appear in the
+  new vector.  This approach will ensure that you always generate a result
+  that is valid (i.e. each value appears exactly once in the vector).
+  </p>
+  
+  <p>
+  You can use the STL <tt>std::set</tt> collection to keep track of which
+  values you have added to the vector.
+  </p>
+  
+  <p>
+  Finally, when you have created the new order-vector, you can use it to
+  create a new <tt>TSPGenome</tt> object.
+  </p>
+</li>
+
+</ul>
+
+<h3>Finding a Short Path</h3>
+
+<p>
+Once the above components have been implemented, you can implement this
+function (again, not a member of <tt>TSPGenome</tt>, but still in the
+<tt>tsp-ga.hh</tt> / <tt>tsp-ga.cc</tt> files):
+</p>
+
+<pre>  TSPGenome findAShortPath(const vector&lt;Point&gt; &amp;points,
+                           int populationSize, int numGenerations,
+                           int keepPopulation, int numMutations)</pre>
+
+<p>
+(Note that we call this "find a short path," because we really don't know if
+it is the shortest path.)
+</p>
+
+<p>
+The function works as follows:
+</p>
+
+<ol>
+<li>
+  <p>
+  Generate an initial population of random genomes.  The population size is
+  specified in the argument to the function.  The size of each genome is
+  the number of points.
+  </p>
+</li>
+    
+<li>
+  <p>
+  Iterate over the population and compute the circuit length for each
+  member.
+  </p>
+</li>
+    
+<li>
+  <p>
+  Since the circuit length is the fitness function, we can now sort the
+  vector of genomes with the circuit length.  You can create a simple
+  helper function (I put mine right before my implementation of
+  <tt>findAShortPath()</tt>) with this signature:
+  </p>
+    
+  <pre>    bool isShorterPath(const TSPGenome &amp;g1, const TSPGenome &amp;g2)</pre>
+  
+  <p>  
+  The function should return <tt>true</tt> if <tt>g1</tt> has a shorter
+  circuit length than <tt>g2</tt>; <tt>false</tt> otherwise.
+  </p>
+
+  <p>
+  You can pass this function to the <tt>std::sort()</tt> algorithm, to sort
+  the TSP genomes by fitness.  (The "fittest" ones should be at the lowest
+  indexes.)
+  </p>
+</li>
+
+<li>
+  <p>
+  So you know what is going on, you should add some code that prints out the
+  fitness of the best solution, every 10 generations.  It can be something
+  like this:
+  </p>
+  
+  <pre>    // gen is the generation #; it starts at 0
+    // population is the vector of TSP genomes
+    if (gen % 10 == 0) {
+        cout &lt;&lt; "Generation " &lt;&lt; gen &lt;&lt; ":  shortest path is "
+             &lt;&lt; population[0].getCircuitLength() &lt;&lt; endl;
+    }</pre>
+</li>
+
+<li>
+  <p>
+  Now you need to keep the top N fittest members of the population, but
+  replace the remaining members with new genomes produced from the fittest
+  ones.  The <tt>keepPopulation</tt> argument specifies how many individuals
+  to keep from the existing population; they will be at the indexes
+  [0, <tt>keepPopulation</tt>-1].
+  </p>
+  
+  <p>
+  It's pretty easy to generate new genomes into the existing population,
+  overwriting the existing members.  You can do something like this:
+  </p>
+  
+  <pre>  for i in [keepPopulation, populationSize):
+      set g1 = a random index in the range [0, keepPopulation)
+      set g2 = a <u>different</u> random index in the range [0, keepPopulation)
+      
+      set population[i] = crosslink(population[g1], population[g2])</pre>
+  
+  <p>
+  Again, you can choose a random index using the same expression as before:
+  <tt>rand() % keepPopulation</tt> will generate a value in the range
+  <tt>[0, keepPopulation - 1]</tt>.
+  </p>
+</li>
+
+<li>
+  <p>
+  Next you get to mutate things!  This is the purpose of the
+  <tt>numMutations</tt> argument:  it specifies how many mutations to apply
+  to the population.  You can implement a simple loop that chooses a random
+  index, then calls <tt>mutate()</tt> on the genome at that index.
+  </p>
+  <p>
+  It would probably be best to <em>not</em> mutate the genome at index 0,
+  since it is the best solution found so far.  This is pretty easy to do
+  with an exmpression like:  <tt>1 + rand() % (populationSize - 1)</tt>
+  </p>
+</li>
+
+<li>
+  <p>
+  If you haven't already completed all generations, go back to step 2!
+  Otherwise, return <tt>population[0]</tt>, since this will be the best
+  solution found so far.
+  </p>
+</li>
+</ol>
+
+<h3>The Main Program</h3>
+
+<p>
+Once you have completed all of the above work, it's time to create a
+<tt>main()</tt> function that will read in points and then call your TSP
+genetic algorithm to find a solution.  Do this in a file
+<tt>tsp-main.cc</tt>.  You can start with your previous lab's <tt>main()</tt>
+function, and alter it according to the requirements below.
+</p>
+
+<p>
+This time your program should take the following command-line arguments:
+</p>
+
+<pre>  ./tsp-ga population generations keep mutate</pre>
+
+<ul>
+<li><tt>population</tt> is a positive integer specifying the population
+    size</li>
+<li><tt>generations</tt> is a positive integer specifying how many
+    generations to run the GA for</li>
+<li><tt>keep</tt> is a floating-point value in the range 0-1 that specifies
+    the percentage of the population that should be preserved from
+    generation to generation.  For example, 0.3 would specify that the top
+    30% of the population should be preserved to the next generation.</li>
+<li><tt>mutate</tt> is a nonnegative floating-point value that specifies how
+    many mutations to apply to each member of the population, on average.
+    For example, a value of 1.5 specifies that each member will have about
+    1.5 mutations applied.  The total number of mutations to apply to the
+    population is simply <em>mutate</em> &amp;mult; <em>population</em> at the
+    end of each generation.</li>
+</ul>
+
+<p>
+If the program doesn't get the proper number of arguments, or if it gets
+values that are not in the proper ranges, show a usage message and then
+terminate the program.  You can use the <tt>atoi()</tt> and <tt>atof()</tt>
+functions for argument parsing; don't worry about detecting if the arguments
+are all valid numbers.
+</p>
+
+<p>
+Besides the new arguments, the program should operate as before:  First,
+prompt the user for how many points, and then prompt for each point.  Next,
+call the <tt>findAShortPath()</tt> function with the appropriate parameters
+based on the command-line arguments.
+</p>
+
+<p>
+You will probably want to seed the random number generator so that it will
+generate a different random sequence each time it runs.  You can do this
+by including the <tt>&lt;ctime&gt;</tt> and <tt>&lt;cstdlib&gt;</tt>
+headers, and then adding this line:  <tt>srand(time(nullptr));</tt>
+</p>
+
+<p>
+When the program has finished running the number of generations specified,
+it should print out the length of the shortest path found, along with the
+path itself, and then exit.
+</p>
+
+<h3>Testing Your Program</h3>
+
+<p>
+You can test your program with any of the test files from the previous lab,
+but you will probably find they are not that challenging to your new program.
+So, here are some new files to use.  Note that we don't have the shortest
+circuit and the length of it, because the inputs are prohibitively large to
+use with the previous program.
+</p>
+
+<ul>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab3/test-30.txt"><tt>test-30.txt</tt></a></li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab3/test-60.txt"><tt>test-60.txt</tt></a></li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab3/test-100.txt"><tt>test-100.txt</tt></a></li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab3/test-300.txt"><tt>test-300.txt</tt></a></li>
+<li><a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab3/test-500.txt"><tt>test-500.txt</tt></a></li>
+</ul>
+
+<p>
+With the <tt>test-12.txt</tt> file from last week, my <tt>tsp</tt> program
+takes about 1 minute 20 seconds to complete.  The best order is
+[2 6 4 1 11 10 9 0 5 7 3 8], and the distance is 47.6887.
+</p>
+
+<p>
+Here is example output from running the TSP GA solver on the same input.
+It can reliably find the best path in approximately 7 seconds.
+</p>
+
+<pre>./tsp-ga 1000 100 .4 1 &lt; test-12.txt
+... <em>(prompts for # of points, etc.)</em> ...
+Generation 0:  shortest path is 60.4167
+Generation 10:  shortest path is 50.2302
+Generation 20:  shortest path is 50.2302
+Generation 30:  shortest path is 47.6887
+Generation 40:  shortest path is 47.6887
+Generation 50:  shortest path is 47.6887
+Generation 60:  shortest path is 47.6887
+Generation 70:  shortest path is 47.6887
+Generation 80:  shortest path is 47.6887
+Generation 90:  shortest path is 47.6887
+Best order:  [1 11 10 9 0 5 7 3 8 2 6 4]
+Shortest distance:  47.6887</pre>
+
+<p>
+You will notice that the path is rotated from the first program's path, but
+it is still the same path.  You may notice that your solver may generate
+paths in the opposite direction as well.
+</p>
+
+<h3>Submission</h3>
+
+When you are finished, submit the following files on csman:
+
+<ul>
+  <li>Your point files:  <tt>Point.hh</tt> and <tt>Point.cc</tt></li>
+  <li>Your TSP GA implementation:  <tt>tsp-ga.hh</tt> and <tt>tsp-ga.cc</tt></li>
+  <li>Your main program:  <tt>tsp-main.cc</tt></li>
+</ul>
+
+
+
+
+</body></html>

@@ -1,0 +1,250 @@
+
+<!-- saved from url=(0071)http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab4/index.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>CS11 Intro C++ - Mazes!</title>
+</head>
+
+<body>
+<h1>Mazes!</h1>
+<p>
+This week you will create a class to represent mazes.  Mazes are a bit tricky
+because the most important things - the walls - sit between the cells.
+Let's say we have the following maze:
+</p>
+
+<img src="./CS11 Intro C++ - Mazes!_files/maze.png" alt="3x4 maze">
+
+<p>
+The cells form a 2D grid, which we shall reference with (<em>row</em>,
+<em>column</em>) coordinates.  Cell (0, 0) is the starting point, and cell
+(2, 3) is the ending point.
+</p>
+
+<p>
+We can represent the maze with an array, but we also need to be able to store
+the walls somewhere.  One approach for representing mazes is to add extra rows
+and columns between cells, where the walls themselves will be represented.
+Therefore, the above maze would be stored like this:
+</p>
+
+<img src="./CS11 Intro C++ - Mazes!_files/maze-expanded.png" alt="representation of 3x4 maze">
+
+<p>
+The green boxes are the cells themselves, and the yellow boxes represent the
+walls.  The white boxes are unused in this representation, which may seem a
+bit wasteful, but we won't be creating giant mazes, so we'll pick a clear and
+slightly wasteful representation, rather than a confusing and extremely
+efficient one.
+</p>
+
+<p>
+You can see that for a maze of size
+<em>N<sub>rows</sub></em>×<em>N<sub>cols</sub></em>,
+our representation requires a total of
+(2<em>N<sub>rows</sub></em> + 1) × (2<em>N<sub>cols</sub></em> + 1)
+elements.  For our above example, with 3 rows and 4 columns, we would need
+(2 * 3 + 1) × (2 * 4 + 1) cells, or 7×9 cells.
+</p>
+
+<h2>C++ and Multidimensional Arrays</h2>
+
+<p>
+As mentioned in class, C++ doesn't have very good support for dynamically
+allocated multidimensional arrays; languages like Java are much better at this
+kind of thing.  In C++, we typically allocate a 1-dimensional array with enough
+space for the <u>total</u> number of elements, and then map our 2D (or 3D, or
+whatever) coordinates into our 1D array.  For example, given a 2D array with
+<em>N<sub>rows</sub></em> rows and <em>N<sub>cols</sub></em> columns:
+</p>
+
+<ul>
+<li>The program can allocate a 1D array with
+    <em>N<sub>rows</sub></em>×<em>N<sub>cols</sub></em> elements</li>
+<li>An element at 2D position (<em>row</em>, <em>col</em>) can be mapped to
+    <em>row</em>×<em>N<sub>cols</sub></em> + <em>col</em></li>
+</ul>
+
+<p>
+This mapping should make sense:  for each row we are going to skip, we must
+move past <em>N<sub>cols</sub></em> cells to get to the next row.  Of course,
+this is not the only way we can map 2D coordinates into the 1D array, but this
+is the typical approach for C and C++.  It is called a <em>row-major order</em>.
+(A few other languages, like Matlab and Fortran, use a <em>column-major
+order</em> for how they represent multidimensional arrays.)
+</p>
+
+<h2>Accessing Maze Cells and Walls</h2>
+
+<p>
+In order to provide a simple abstraction for people to use, we will implement a
+<tt>Maze</tt> class that uses <em>cell coordinates</em> to reference various
+aspects of the maze, but internally we will map cell coordinates into the
+"expanded representation" we use internally.  We will call the coordinates in
+the expanded representation <em>expanded coordinates</em>.
+</p>
+
+<p>
+You should be able to see how to map cell coordinates into expanded coordinates
+very easily.  Given a maze with
+<em>N<sub>cell-rows</sub></em> × <em>N<sub>cell-cols</sub></em> cells,
+we can map the cell coordinates
+(<em>r<sub>cell</sub></em>, <em>c<sub>cell</sub></em>) into expanded
+coordinates (<em>r<sub>exp</sub></em>, <em>c<sub>exp</sub></em>) as follows:
+
+</p><ul>
+<li><em>r<sub>exp</sub></em> = 2 <em>r<sub>cell</sub></em> + 1</li>
+<li><em>c<sub>exp</sub></em> = 2 <em>c<sub>cell</sub></em> + 1</li>
+</ul>
+
+<p>
+Given a particular cell, we will want to know if there is a wall on a particular side of the cell; we will use the cardinal directions "North", "East", "South" or "West" of the cell.  Then, we can ask questions like:
+
+</p><ul>
+<li>Is there a wall to the west (left) of cell (1, 2) in the original maze?
+    <b>Yes.</b></li>
+<li>Is there a wall to the north of cell (2, 3) in the maze?  <b>No.</b></li>
+</ul>
+
+<p>
+Accessing the walls between cells is similarly straightforward:
+</p>
+
+<ul>
+<li>To access the wall north of a given cell, compute the cell's expanded
+    coordinates and subtract 1 from the row value.</li>
+<li>To access the wall south of a given cell, compute the cell's expanded
+    coordinates and add 1 to the row value.</li>
+<li>To access the wall east of a given cell, compute the cell's expanded
+    coordinates and add 1 to the column value.</li>
+<li>To access the wall west of a given cell, compute the cell's expanded
+    coordinates and subtract 1 from the column value.</li>
+</ul>
+
+<h2>Your Tasks</h2>
+
+<p>
+This week you will need to complete the implementation of the <tt>Maze</tt>
+class.  There are quite a few member functions to implement, but you should not
+worry about this since the vast majority of them will end up being only a few
+lines long, at most.  Only a few of these functions will actually require
+careful thought.
+</p>
+
+<p>
+To help you know what you need to do, we are providing you with
+<a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab4/maze-initial.hh">an initial version of <tt>maze.hh</tt></a>, which
+you can download and then rename to <tt>maze.hh</tt>.  This file contains the
+following:
+</p>
+
+<ul>
+<li>A declaration of the <tt>Maze</tt> class, which includes all operations
+    you must support.  Feel free to add member functions if you wish (in
+    particular, private helper functions), but don't change the public 
+    interface that the class specifies!</li>
+<li>A <tt>MazeCell</tt> enumeration that specifies all the values that cells in
+    the expanded representation of the maze can take on.  You should not need
+    to change this.</li>
+<li>A <tt>Direction</tt> enumeration that specifies the cardinal directions that
+    are used by the maze code.  You should not need to change this.</li>
+<li>A <tt>Location</tt> class that can be used to represent (row, column)
+    locations.  You shouldn't need to make any changes to this class.</li>
+</ul>
+
+<p>
+The reason for the <tt>Location</tt> class is that C++ functions cannot return
+more than one value, but it is very helpful to be able to return a (row,col)
+value from various functions.  Thus, we can package the row and column value
+into a <tt>Location</tt> object, and return that object from a function.
+</p>
+
+<p>
+The required operations in the maze class are explained in the comments in the
+<tt>maze.hh</tt> header file.  Feel free to ask for any clarifications.
+</p>
+
+<h2>Suggested Approach</h2>
+
+<p>
+You will need to dynamically allocate an array for the expanded representation
+of the maze using the heap.  Since you are dynamically allocating memory, you
+will need to write a destructor to free the memory, and a copy-constructor and
+an assignment operator to handle copying and assignment correctly.  (That is,
+you will need to perform a deep copy, not a shallow copy.)  This is the
+<a href="https://en.wikipedia.org/wiki/Rule_of_three_(C%2B%2B_programming)"><b>Rule of Three</b></a> -
+if you implement a copy-constructor, assignment operator, or destructor for your class, you really should implement all three.
+</p>
+
+<p>
+If you create simple abstractions for your class, you will find that your implementation goes much easier.  For example, you might want to create these
+private helper functions (i.e. declare them in the <tt>private</tt> section of your class):
+</p>
+
+<pre>  // Take 2D expanded coordinates and compute the corresponding 1D array index
+  int getArrayIndex(const Location &amp;loc) const;
+
+  // Returns the expanded coordinates of the specified cell coordinates
+  Location getCellArrayCoord(int cellRow, int cellCol) const;
+  
+  // Returns the expanded coordinates of the wall on a specific side of
+  // a cell given in cell coordinates
+  Location getWallArrayCoord(int cellRow, int cellCol,
+                             Direction direction) const;</pre>
+
+<p>
+Then, your other functions can use these helpers to perform their tasks.  By
+taking this approach, you minimize the number of places where you will have to
+write the tricky array-indexing operations that are so easy to get wrong.  If
+you have bugs, you will only have to fix them in one place.
+</p>
+
+<p>
+<b>Use assertions liberally!</b>  Here are some ideas; if you see other places
+to use assertions, put them there too!
+</p>
+
+<ul>
+<li>Check every set of incoming coordinates to be sure they are in the proper
+    range.</li>
+<li>Check row coordinates and column coordinates in separate assertions.</li>
+<li>As indicated in the comments for <tt>getNeighborCell()</tt>, trip an
+    assertion if someone tries to get a neighbor cell that is invalid.</li>
+</ul>
+
+<p>
+Probably the hardest function to write will be the <tt>print()</tt> function.
+You can use the &lt;&lt; stream-output operator on the <tt>ostream</tt> object,
+just as if it were <tt>cout</tt>.  You may want to follow a structure like the
+following:
+</p>
+
+<pre>  Output the number of cell-rows and cell-columns
+  
+  For each row r from 0 to numRows - 1:
+      Output the walls above row r
+      Output the cells in row r, along with the walls in between those cells
+      
+  Finally, output the walls below the last row</pre>
+
+<h2>Testing</h2>
+
+<p>
+You can download <a href="http://courses.cms.caltech.edu/cs11/material/cpp/donnie/lab4/testmaze.tgz">this program</a> to exercise your
+maze code.  It performs a pretty exhaustive battery of tests, so by the time
+your program passes all the tests, you should have a pretty high confidence
+that it works.  You can compile and run the test program like this:
+</p>
+
+<pre>  g++ -Wall -std=c++14 maze.cc test-maze.cc testbase.cc -o test-maze
+  ./test-maze</pre>
+
+<h2>All Done?</h2>
+
+<p>
+When you have finished your maze program, you should submit your completed
+<tt>maze.hh</tt> and <tt>maze.cc</tt> files on csman.
+</p>
+  
+
+
+</body></html>

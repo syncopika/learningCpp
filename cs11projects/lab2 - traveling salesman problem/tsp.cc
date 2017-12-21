@@ -11,7 +11,8 @@ using namespace std;
 double circuitLength(const vector<Point> &points, const vector<int> &order);
 vector<int> findShortestPath(const vector<Point> &points);
 
-//function definitions
+/* function definitions */
+
 double circuitLength(const vector<Point> &points, const vector<int> &order){
 	
 	double circuitLength = 0;
@@ -51,13 +52,14 @@ vector<int> findShortestPath(const vector<Point> &points){
 		
 	//we can loop through all permutations of currPathOrder
 	//and find the shortest path
-	while(next_permutation(currPathOrder.begin(), currPathOrder.end()) != false){
-		
+	while(next_permutation(currPathOrder.begin(), currPathOrder.end())){
+
 		//calling next_permutation transforms currPath into the next permutations
 		//so we just need to analyze currPath here again
 		double currLength = circuitLength(points, currPathOrder);
 		
-		if(currLength < shortestPathLength){
+		// the less-than-or-equal is important here! i.e. for when there's just 2 points 
+		if(currLength <= shortestPathLength){
 			shortestPathLength = currLength;
 			shortestPath = currPathOrder;
 		}

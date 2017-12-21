@@ -49,6 +49,8 @@ Matrix::~Matrix(){
 }
 	
 // getters
+// the presence of 'const' indicates that the member function does not change 
+// the object it's called on 
 int Matrix::getrows() const{
 	return rows;
 }
@@ -85,7 +87,6 @@ void Matrix::add(Matrix &m){
 			}
 		}
 	}
-	
 }
 
 void Matrix::subtract(Matrix &m){
@@ -102,8 +103,6 @@ void Matrix::subtract(Matrix &m){
 			}
 		}
 	}
-	
-	
 }
 	
 // equals method

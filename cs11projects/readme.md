@@ -1,0 +1,1 @@
+to run the executables of these projects, libstdc++-6.dll is needed in the same directory as the executable.    

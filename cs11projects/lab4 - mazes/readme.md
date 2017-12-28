@@ -1,0 +1,2 @@
+the only files containing my work is maze.cc and test.cc.    
+currently passing 8/10 tests. one of my previous problems was that I was returning expanded coordinates rather than the regular coordinates.    

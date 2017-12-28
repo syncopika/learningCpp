@@ -12,7 +12,8 @@ int Maze::get1DIndex(const Location &loc) const{
 	int x = loc.col;
 	int y = loc.row;
 	// the index of loc in a 1D array should be y*numCols+x
-	return (y*numCols) + x;
+	// the numCols is 2*numCols + 1 because this is the expanded number of columns! 
+	return (y*(2*numCols + 1)) + x;
 }
 
 // convert regular maze matrix coord into expanded 2D coordinates 
@@ -30,31 +31,31 @@ Location Maze::getExpandedCoords(int row, int col) const{
 // get the expanded coordinates of the wall on a particular side of a cell
 // given its regular 1D coords 
 // row, col, direction
-Location Maze::getWallCoords(int yCoord, int xCoord, Direction dir) const{
+Location Maze::getWallCoords(int row, int col, Direction dir) const{
 	
 	if(dir == Direction::NORTH){
 		// convert cell coord to expanded coord first. then subtract 1 from the row.
-		int expRow = (2*yCoord);
-		int expCol = (2*xCoord) + 1;
+		int expRow = (2*row);
+		int expCol = (2*col) + 1;
 		return Location(expRow, expCol);
 	
 	}else if(dir == Direction::SOUTH){
 		
-		int expRow = (2*yCoord) + 2;
-		int expCol = (2*xCoord) + 1;
+		int expRow = (2*row) + 2;
+		int expCol = (2*col) + 1;
 		return Location(expRow, expCol);
 		
 	}else if(dir == Direction::EAST){
 
-		int expRow = (2*yCoord) + 1;
-		int expCol = (2*xCoord);
+		int expRow = (2*row) + 1;
+		int expCol = (2*col) + 2;
 		return Location(expRow, expCol);
 	
 	}else{
 		
 		// direction is WEST
-		int expRow = (2*yCoord) + 1;
-		int expCol = (2*xCoord) + 2;
+		int expRow = (2*row) + 1;
+		int expCol = (2*col);
 		return Location(expRow, expCol);
 	}
 }
@@ -112,17 +113,25 @@ Maze::Maze(const Maze &m){
 			cells[get1DIndex(expandedCellCoords)] = m.getCell(i, j);
 			
 			// then check walls in N,S,E,W
-			Location north = getWallCoords(i, j, Direction::NORTH);
-			cells[get1DIndex(north)] = m.getCell(north.row, north.col);
+			if(m.hasWall(i, j, Direction::NORTH)){
+				Location north = getWallCoords(i, j, Direction::NORTH);
+				cells[get1DIndex(north)] = MazeCell::WALL;
+			}
+				
+			if(m.hasWall(i, j, Direction::SOUTH)){
+				Location south = getWallCoords(i, j, Direction::SOUTH);
+				cells[get1DIndex(south)] = MazeCell::WALL;
+			}
 			
-			Location south = getWallCoords(i, j, Direction::SOUTH);
-			cells[get1DIndex(south)] = m.getCell(south.row, south.col);
+			if(m.hasWall(i, j, Direction::EAST)){
+				Location east = getWallCoords(i, j, Direction::EAST);
+				cells[get1DIndex(east)] = MazeCell::WALL;
+			}
 			
-			Location east = getWallCoords(i, j, Direction::EAST);
-			cells[get1DIndex(east)] = m.getCell(east.row, east.col);
-			
-			Location west = getWallCoords(i, j, Direction::WEST);
-			cells[get1DIndex(west)] = m.getCell(west.row, west.col);
+			if(m.hasWall(i, j, Direction::WEST)){
+				Location west = getWallCoords(i, j, Direction::WEST);
+				cells[get1DIndex(west)] = MazeCell::WALL;
+			}
 		}
 	}
 	
@@ -166,17 +175,25 @@ Maze & Maze::operator=(const Maze &m){
 				cells[get1DIndex(expandedCellCoords)] = m.getCell(i, j);
 				
 				// then check walls in N,S,E,W
-				Location north = getWallCoords(i, j, Direction::NORTH);
-				cells[get1DIndex(north)] = m.getCell(north.row, north.col);
+				if(m.hasWall(i, j, Direction::NORTH)){
+					Location north = getWallCoords(i, j, Direction::NORTH);
+					cells[get1DIndex(north)] = MazeCell::WALL;
+				}
+					
+				if(m.hasWall(i, j, Direction::SOUTH)){
+					Location south = getWallCoords(i, j, Direction::SOUTH);
+					cells[get1DIndex(south)] = MazeCell::WALL;
+				}
 				
-				Location south = getWallCoords(i, j, Direction::SOUTH);
-				cells[get1DIndex(south)] = m.getCell(south.row, south.col);
+				if(m.hasWall(i, j, Direction::EAST)){
+					Location east = getWallCoords(i, j, Direction::EAST);
+					cells[get1DIndex(east)] = MazeCell::WALL;
+				}
 				
-				Location east = getWallCoords(i, j, Direction::EAST);
-				cells[get1DIndex(east)] = m.getCell(east.row, east.col);
-				
-				Location west = getWallCoords(i, j, Direction::WEST);
-				cells[get1DIndex(west)] = m.getCell(west.row, west.col);
+				if(m.hasWall(i, j, Direction::WEST)){
+					Location west = getWallCoords(i, j, Direction::WEST);
+					cells[get1DIndex(west)] = MazeCell::WALL;
+				}
 			}
 		}	
 	}
@@ -200,21 +217,22 @@ Location Maze::getEnd() const{
 	return end;
 }
 
+// only use this function for getting cells that are in the maze (not wall cells)
 MazeCell Maze::getCell(int cellRow, int cellCol) const{
-	Location loc = Location(cellRow, cellCol);
+	Location loc = getExpandedCoords(cellRow, cellCol);
 	return cells[get1DIndex(loc)];
 }
 
 bool Maze::hasWall(int cellRow, int cellCol, Direction direction) const{
 	Location wallLoc = getWallCoords(cellRow, cellCol, direction);
 	int index = get1DIndex(wallLoc);
-	return cells[index] == MazeCell::WALL;
+	return (cells[index] == MazeCell::WALL);
 }
 
 bool Maze::isVisited(int cellRow, int cellCol) const{
 	Location cellLoc = getExpandedCoords(cellRow, cellCol);
 	int index = get1DIndex(cellLoc);
-	return cells[index] == MazeCell::VISITED;
+	return (cells[index] == MazeCell::VISITED);
 }
 
 Location Maze::getNeighborCell(int cellRow, int cellCol, Direction direction) const{
@@ -251,7 +269,7 @@ void Maze::clearWall(int cellRow, int cellCol, Direction direction){
 }
 
 void Maze::setCell(int cellRow, int cellCol, MazeCell val){
-	Location cellLoc = Location(cellRow, cellCol);
+	Location cellLoc = getExpandedCoords(cellRow, cellCol);
 	int index = get1DIndex(cellLoc);
 	cells[index] = val;
 }
@@ -311,13 +329,15 @@ void Maze::print(ostream &os) const{
 				if(hasWall(k, l, Direction::NORTH)){
 					topRow += "---+";
 				}else{
-					topRow += "   ";
+					topRow += "   +";
 				}
 			}
 			
 			// check left walls for each cell in this row
 			if(hasWall(k, l, Direction::WEST)){
 				currRow += "|";
+			}else{
+				currRow += " ";
 			}
 			
 			// check if this cell is start, end or empty 
@@ -334,9 +354,11 @@ void Maze::print(ostream &os) const{
 			}
 			
 			// if last cell for the row, check the right wall 
-			if(l == numCols - 1){
+			if(l == (numCols - 1)){
 				if(hasWall(k, l, Direction::EAST)){
 					currRow += "|\n";	// add a new line!
+				}else{
+					currRow += "\n";
 				}
 			}
 			

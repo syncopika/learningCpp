@@ -3,67 +3,7 @@
 // http://gamedevgeek.com/tutorials/moving-sprites-with-sdl/
 // https://stackoverflow.com/questions/25738096/c-sdl2-error-when-trying-to-render-sdl-texture-invalid-texture
 
-#include "demo2.hh"
-
-/**
-*	character class 
-*/
-
-// constructor
-Character::Character(const std::string name, const std::string file, SDL_Renderer *ren){
-	
-	// set the name 
-	charName = name;
-	
-	// by default, positions set to 0, 0 
-	xPos = 0;
-	yPos = 0;
-	
-	// load the image 
-	charTexture = loadTexture(file, ren);
-	if(charTexture == nullptr){
-		// what about freeing the window?
-		// throw an exception here?
-	}
-}
-
-// get the character's name 
-std::string Character::getName(){
-	return charName;
-}
-
-// get the character's x position
-int Character::getXPos(){
-	return xPos;
-}
-
-// get the character's y position 
-int Character::getYPos(){
-	return yPos;
-}
-
-// get the character's texture 
-SDL_Texture* Character::getTexture(){
-	return charTexture;
-}
-
-// set the character's x position 
-void Character::setXPos(int x){
-	xPos = x;
-}
-
-// set the character's y position 
-void Character::setYPos(int y){
-	yPos = y;
-}
-
-// destroy texture member variable
-void Character::destroyTexture(){
-	SDL_DestroyTexture(charTexture);
-}
-
-
-
+#include "../headers/functions.hh"
 
 /**
 * log SDL error 
@@ -85,6 +25,10 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
 	
 	// if the load was successful, loadedImage won't be nullptr 
 	if(loadedImage != nullptr){
+		
+		// color key the surface to make any 255,255,255 pixels transparent!
+		 SDL_SetColorKey(loadedImage, SDL_TRUE, SDL_MapRGB(loadedImage->format, 0xFF, 0xFF, 0xFF ) );
+		
 		// turn the surface to a texture 
 		texture = SDL_CreateTextureFromSurface(ren, loadedImage);
 		
@@ -95,6 +39,7 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
 		if(texture == nullptr){
 			logSDLError(std::cout, "CreateTextureFromSurface");
 		}
+		
 	}else{
 		// error with loadedImage 
 		logSDLError(std::cout, "LoadBMP");
@@ -106,7 +51,7 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
 /**
 * render a texture 
 */
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int Direction){
 	// set up a destination rectangle to be at the position given by x and y 
 	SDL_Rect dst;
 	dst.x = x;
@@ -115,7 +60,16 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
 	// query the texture to get the width and height 
 	// the rectangle will take on the width and height of the texture 
 	SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
-	SDL_RenderCopy(ren, tex, NULL, &dst);
+	
+	if(Direction == UP){
+		SDL_RenderCopyEx(ren, tex, NULL, &dst, 0, NULL, SDL_FLIP_VERTICAL);
+	}else if(Direction == LEFT){
+		SDL_RenderCopyEx(ren, tex, NULL, &dst, 90, NULL, SDL_FLIP_NONE);
+	}else if(Direction == RIGHT){
+		SDL_RenderCopyEx(ren, tex, NULL, &dst, 270, NULL, SDL_FLIP_NONE);
+	}else{
+		SDL_RenderCopyEx(ren, tex, NULL, &dst, 0, NULL, SDL_FLIP_NONE);
+	}
 }
 
 /**
@@ -131,19 +85,24 @@ void cleanup(SDL_Window* win, SDL_Texture* background, SDL_Renderer* ren){
 /**
 * determine movement for sprite  
 **/
-void determineMovement(Character& character, const Uint8 *state){
+int determineMovement(Character& character, const Uint8 *state){
 	
 	int x = character.getXPos();
 	int y = character.getYPos();
+	int direction = NONE;
 	
 	if(state[SDL_SCANCODE_LEFT]){
-		character.setXPos(x - 2);
+		character.setXPos(x - 5);
+		direction = LEFT;
 	}else if(state[SDL_SCANCODE_RIGHT]){
-		character.setXPos(x + 2);
+		character.setXPos(x + 5);
+		direction = RIGHT;
 	}else if(state[SDL_SCANCODE_UP]){
-		character.setYPos(y - 2);
+		character.setYPos(y - 5);
+		direction = UP;
 	}else if(state[SDL_SCANCODE_DOWN]){
-		character.setYPos(y + 2);
+		character.setYPos(y + 5);
+		direction = DOWN;
 	}
 	
 	// basic "collision detection"
@@ -161,5 +120,7 @@ void determineMovement(Character& character, const Uint8 *state){
 	}else if(y > SCREEN_HEIGHT - SPRITE_HEIGHT){
 		character.setYPos(SCREEN_HEIGHT - SPRITE_HEIGHT);
 	}
+	
+	return direction;
 	
 }

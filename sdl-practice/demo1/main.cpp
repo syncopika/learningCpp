@@ -27,7 +27,7 @@ int main(int argc, char **argv){
 	}
 	
 	// then load image into the renderer - turns surface into a texture 
-	SDL_Texture *tex = loadTexture("resources/purin.bmp", renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	SDL_Texture *tex = loadTexture("resources/Hydrangeas.bmp", renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 	if(tex == nullptr){
 		SDL_DestroyTexture(tex);
 		SDL_DestroyRenderer(renderer);
@@ -37,7 +37,7 @@ int main(int argc, char **argv){
 	}
 	
 	// load a 2nd texture 
-	SDL_Texture *tex2 = loadTexture("resources/purin2.bmp", renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	SDL_Texture *tex2 = loadTexture("resources/Tulips.bmp", renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 	if(tex2 == nullptr){
 		SDL_DestroyTexture(tex2);
 		SDL_DestroyRenderer(renderer);

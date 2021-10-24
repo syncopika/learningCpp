@@ -3,7 +3,7 @@
 
 // implement constructor
 template <class T>
-Node<T>::Node(T val){
+Node<T>::Node(const T& val){
 	value = val;
 	next = nullptr;
 }
@@ -16,7 +16,7 @@ Node<T>::~Node(){
 
 // implement setters
 template <class T>
-void Node<T>::setValue(T val){
+void Node<T>::setValue(const T& val){
 	value = val;
 }
 
@@ -27,7 +27,7 @@ void Node<T>::setNext(Node* n){
 
 // getters
 template <class T>
-T Node<T>::getValue(){
+T& Node<T>::getValue(){
 	return value;
 }
 
@@ -46,9 +46,9 @@ Node<T>* Node<T>::getNext(){
 int main(){
 	
 	// set up nodes for integer 
-	Node<int> n1(10);
-	Node<int> n2(3);
-	Node<int> n3(5);
+	Node<int> n1{10};
+	Node<int> n2{3};
+	Node<int> n3{5};
 	
 	// link nodes 
 	n1.setNext(&n2);
@@ -63,10 +63,14 @@ int main(){
 	
 	std::cout << "------------" << std::endl;
 	
-	// try it with strings 
+	// try it with strings
 	Node<std::string> n4("hey");
-	Node<std::string> n5("there");
-	Node<std::string> n6("hiiii");
+	
+	std::string s2("there");
+	Node<std::string> n5(s2);
+	
+	std::string s3("hiii");
+	Node<std::string> n6(s3);
 	
 	n4.setNext(&n5);
 	n5.setNext(&n6);

@@ -29,8 +29,8 @@ public:
   void setNext(Node* n); // accept a reference to another node 
 
   // getters
-  T& getValue();
-  Node* getNext();
+  T& getValue() const;
+  Node* getNext() const;
   
 };
 

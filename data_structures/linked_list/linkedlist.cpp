@@ -27,13 +27,13 @@ void Node<T>::setNext(Node* n){
 
 // getters
 template <class T>
-T& Node<T>::getValue(){
+T& Node<T>::getValue() const{
 	return value;
 }
 
 // if next is null, return null. otherwise, return the ptr to the next node
 template <class T>
-Node<T>* Node<T>::getNext(){
+Node<T>* Node<T>::getNext() const{
 	if(next == nullptr){
 		return nullptr;
 	}else{
@@ -44,7 +44,6 @@ Node<T>* Node<T>::getNext(){
 
 //// testing 
 int main(){
-	
 	// set up nodes for integer 
 	Node<int> n1{10};
 	Node<int> n2{3};

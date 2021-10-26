@@ -52,10 +52,23 @@ bool BSTNode<T>::remove(const T& val){
 }
 
 template <class T>
-bool BSTNode<T>::find(const T& val){
-	// TODO
-	// recursive helper?
-	return true;
+bool BSTNode<T>::findHelper(const T& valToFind, BSTNode* node, bool result){
+	if(node == nullptr){
+		return result;
+	}else if(node->getValue() == valToFind){
+		return true;
+	}else{
+		if(valToFind < node->getValue()){
+			return findHelper(valToFind, node->left, result || false);
+		}else{
+			return findHelper(valToFind, node->right, result || false);
+		}
+	}
+}
+
+template <class T>
+bool BSTNode<T>::find(const T& valToFind){
+	return findHelper(valToFind, this, false);
 }
 
 template <class T>
@@ -84,11 +97,17 @@ BSTNode<T>::~BSTNode(){
 // test
 int main(void){
 
-	BSTNode<int> node{50};
-	node.add(100);
+	BSTNode<int> tree{50};
+	tree.add(100);
 	
-	node.traverse();
-	//std::cout << "value: " << node.getValue() << "\n";
-
+	tree.traverse();
+	//std::cout << "value: " << tree.getValue() << "\n";
+	
+	std::cout << "------\n";
+	
+	std::cout << "50 in bst: " << tree.find(50) << "\n";
+	std::cout << "100 in bst: " << tree.find(100) << "\n";
+	std::cout << "51 in bst: " << tree.find(51) << "\n";
+	
 	return 0;
 }

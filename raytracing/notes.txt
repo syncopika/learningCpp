@@ -1,0 +1,5 @@
+https://raytracing.github.io/books/RayTracingInOneWeekend.html
+
+g++ -Wall -Wconversion -std=c++14 -o test main.cpp
+
+https://stackoverflow.com/questions/1759300/when-should-i-write-the-keyword-inline-for-a-function-method

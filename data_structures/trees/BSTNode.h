@@ -11,7 +11,7 @@ private:
   // helper methods
   BSTNode* addHelper(const T& val, BSTNode* node);
   bool removeHelper(const T& val, BSTNode* node);
-  bool findHelper(const T& val, BSTNode* node);
+  bool findHelper(const T& valToFind, BSTNode* node, bool result);
   void traverseHelper(BSTNode* node);
 
 public:
@@ -26,10 +26,10 @@ public:
   BSTNode* right;
 	
   // methods
-  const T& getValue() const;
+  const T& getValue() const; // this one might not be necessary?
   void add(const T& val);
   bool remove(const T& val);
-  bool find(const T& val); 
+  bool find(const T& valToFind); 
   void traverse();
 };
 

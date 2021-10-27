@@ -99,6 +99,7 @@ int main(void){
 
 	BSTNode<int> tree{50};
 	tree.add(100);
+	tree.add(20);
 	
 	tree.traverse();
 	//std::cout << "value: " << tree.getValue() << "\n";
@@ -107,6 +108,7 @@ int main(void){
 	
 	std::cout << "50 in bst: " << tree.find(50) << "\n";
 	std::cout << "100 in bst: " << tree.find(100) << "\n";
+	std::cout << "20 in bst: " << tree.find(20) << "\n";
 	std::cout << "51 in bst: " << tree.find(51) << "\n";
 	
 	return 0;

@@ -1,5 +1,5 @@
 #include "Vec3.h"
-
+#include "color.h"
 #include <iostream>
 
 int main(void){
@@ -12,15 +12,8 @@ int main(void){
 	for(int i = height-1; i >= 0; i--){
 		std::cerr << "\rScanlines remaining: " << i << '\n';
 		for(int j = 0; j < width; j++){
-			auto r = double(j) / (width-1);
-			auto g = double(i) / (height-1);
-			auto b = 0.25;
-			
-			int jr = static_cast<int>(255.999 * r);
-			int jg = static_cast<int>(255.999 * g);
-			int jb = static_cast<int>(255.999 * b);
-			
-			std::cout << jr << ' ' << jg << ' ' << jb << '\n';
+			Color pixel_color((double)j / (width-1), (double)i / (height-1), 0.25);
+			write_color(std::cout, pixel_color);
 		}
 	}
 	

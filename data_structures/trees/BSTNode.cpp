@@ -1,4 +1,5 @@
 // binary search tree
+// not sure why I thought to just create the tree from just the node class ¯\_(ツ)_/¯
 
 #include "BSTNode.h"
 #include <iostream>
@@ -43,6 +44,12 @@ void BSTNode<T>::add(const T& val){
 	}else{
 		right = addHelper(val, right);
 	}
+}
+
+template <class T>
+bool BSTNode<T>::removeHelper(const T& val, BSTNode* node){
+	// TODO
+	return true;
 }
 
 template <class T>

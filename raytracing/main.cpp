@@ -3,14 +3,28 @@
 #include "ray.h"
 #include <iostream>
 
+bool hit_sphere(const Point3& center, double radius, const Ray& r){
+    // t^2(b*b) + 2tb*(A - C) + (A - C) * (A - C) - r^2 = 0
+    // where b = direction vector of the ray, A = the origin of the ray, r = radius of sphere
+    // C is the center of the sphere, and t is what we're trying to solve for
+    Vec3 oc = r.origin() - center;
+    auto a = dot(r.direction(), r.direction());
+    auto b = 2.0f*dot(oc, r.direction());
+    auto c = dot(oc, oc) - radius*radius;
+    auto discriminant = b*b - 4*a*c;
+    return discriminant > 0;
+}
+
 Color ray_color(const Ray& r) {
+    if(hit_sphere(Point3(0,0,-1), 0.5f, r)){
+        return Color(1,0,0);
+    }
     Vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5f*(unit_direction.y() + 1.0f);
     return (1.0f - t)*Color(1.0f, 1.0f, 1.0f) + t*Color(0.5f, 0.7f, 1.0f);
 }
 
 int main(void) {
-
     // image
     const auto aspect_ratio = 16.0f / 9.0f;
     const int width = 400;

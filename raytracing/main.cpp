@@ -3,7 +3,7 @@
 #include "ray.h"
 #include <iostream>
 
-bool hit_sphere(const Point3& center, double radius, const Ray& r){
+double hit_sphere(const Point3& center, double radius, const Ray& r){
     // t^2(b*b) + 2tb*(A - C) + (A - C) * (A - C) - r^2 = 0
     // where b = direction vector of the ray, A = the origin of the ray, r = radius of sphere
     // C is the center of the sphere, and t is what we're trying to solve for
@@ -12,15 +12,22 @@ bool hit_sphere(const Point3& center, double radius, const Ray& r){
     auto b = 2.0f*dot(oc, r.direction());
     auto c = dot(oc, oc) - radius*radius;
     auto discriminant = b*b - 4*a*c;
-    return discriminant > 0;
+    if(discriminant < 0){
+        return -1.0;
+    } else {
+        return (-b - sqrt(discriminant)) / (2.0f*a);
+    }
 }
 
 Color ray_color(const Ray& r) {
-    if(hit_sphere(Point3(0,0,-1), 0.5f, r)){
-        return Color(1,0,0);
+    auto t = hit_sphere(Point3(0,0,-1), 0.5f, r);
+    if(t > 0.0f){
+        Vec3 normal = unit_vector(r.at(t) - Point3(0, 0, -1)); // create a vector using the point hit by the ray and the center of the sphere
+        return 0.5f*Color(normal.x()+1, normal.y()+1, normal.z()+1);
     }
+    
     Vec3 unit_direction = unit_vector(r.direction());
-    auto t = 0.5f*(unit_direction.y() + 1.0f);
+    t = 0.5f*(unit_direction.y() + 1.0f);
     return (1.0f - t)*Color(1.0f, 1.0f, 1.0f) + t*Color(0.5f, 0.7f, 1.0f);
 }
 

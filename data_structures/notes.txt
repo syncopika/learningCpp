@@ -1,6 +1,7 @@
-g++ -Wall -Wformat -std=c++14 -o test BSTNode.cpp
+g++ -Wall -Wformat -std=c++14 -o test BinarySearchTree.cpp
 
 https://stackoverflow.com/questions/12032345/protected-member-is-not-declared-in-this-scope-in-derived-class
 https://isocpp.org/wiki/faq/templates#nondependent-name-lookup-members
 https://stackoverflow.com/questions/49141435/why-can-temporary-objects-be-bound-to-const-reference
 https://blog.galowicz.de/2016/03/23/const_reference_to_temporary_object/
+https://stackoverflow.com/questions/14993791/in-c-how-to-write-a-destructor-for-freeing-memory-of-pointer-to-a-structure

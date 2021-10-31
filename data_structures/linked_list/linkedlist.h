@@ -1,8 +1,5 @@
 // linkedlist.h
 
-// create a Node class
-// allow for generics!
-
 #ifndef LINKED_LIST_H
 #define LINKED_LIST_H
 

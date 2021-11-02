@@ -21,9 +21,13 @@ class Sphere : public Hittable {
 };
 
 bool Sphere::hit(const Ray& r, double t_min, double t_max, HitRecord& rec) const {
+    // t^2(b*b) + 2tb*(A - C) + (A - C) * (A - C) - r^2 = 0
+    // where b = direction vector of the ray, A = the origin of the ray, r = radius of sphere
+    // C is the center of the sphere, and t is what we're trying to solve for
+    
     Vec3 oc = r.origin() - center;
     auto a = dot(r.direction(), r.direction());
-    auto b = 2.0f*dot(oc, r.direction());
+    auto b = 2.0*dot(oc, r.direction());
     auto c = dot(oc, oc) - radius*radius;
     auto discriminant = b*b - 4*a*c;
     

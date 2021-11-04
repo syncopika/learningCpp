@@ -1,5 +1,7 @@
 // header for GameObject class
 // a new class like Character or NatureObject can extend this one 
+#ifndef GAMEOBJECT_H
+#define GAMEOBJECT_H
 
 #include <iostream>
 #include <vector>
@@ -57,3 +59,5 @@ class GameObject{
 		virtual void destroyTexture();
 
 };
+
+#endif

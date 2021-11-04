@@ -1,3 +1,6 @@
+#ifndef FUNCTIONS_H
+#define FUNCTIONS_H
+
 #include "Character.hh"
 
 // set window dimensions 
@@ -7,11 +10,7 @@ const int SPRITE_WIDTH = 34;
 const int SPRITE_HEIGHT = 32;
 
 // directions
-const int UP = 1;
-const int DOWN = 2;
-const int LEFT = 3;
-const int RIGHT = 4;
-const int NONE = 0;
+enum Direction { NONE, UP, DOWN, LEFT, RIGHT };
 
 // log SDL error 
 void logSDLError(std::ostream &os, const std::string &msg);
@@ -20,7 +19,7 @@ void logSDLError(std::ostream &os, const std::string &msg);
 SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren);
 
 // render texture to screen
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int Direction);
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, Direction dir);
 
 /*
     try to change to variadic function:
@@ -33,4 +32,6 @@ void cleanup(SDL_Window* win, SDL_Texture* background, SDL_Renderer* ren);
 	determine movement of character
     returns an integer corresponding to direction moved
 */
-int determineMovement(Character& character, const Uint8 *state);
+Direction determineMovement(Character& character, const Uint8 *state);
+
+#endif

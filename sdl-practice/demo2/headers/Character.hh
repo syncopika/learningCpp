@@ -1,3 +1,6 @@
+#ifndef CHARACTER_H
+#define CHARACTER_H
+
 // Character class header file
 #include "GameObject.hh"
 
@@ -33,3 +36,5 @@ class Character : public GameObject{
 		void destroyTexture();
 		
 };
+
+#endif

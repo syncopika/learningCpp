@@ -4,6 +4,7 @@
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #define PI 3.14159265
 
@@ -77,9 +78,22 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, double rot
 	
 	// query the texture to get the width and height 
 	// the rectangle will take on the width and height of the texture 
-	SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
+	SDL_QueryTexture(tex, nullptr, nullptr, &dst.w, &dst.h);
 	
-	SDL_RenderCopyEx(ren, tex, NULL, &dst, rotation, NULL, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(ren, tex, nullptr, &dst, rotation, nullptr, SDL_FLIP_NONE);
+}
+
+void moveAsteroid(Asteroid* asteroid){
+    asteroid->x += asteroid->direction.x;
+    asteroid->y += asteroid->direction.y;
+    if(asteroid->y > SCREEN_HEIGHT || asteroid->x > SCREEN_WIDTH){
+        asteroid->y = -30;
+        asteroid->x = -30;
+    }else if(asteroid->y < -50){
+        asteroid->y = SCREEN_HEIGHT-10; 
+    }else if(asteroid->x < -50){
+        asteroid->x = SCREEN_WIDTH-10;
+    }
 }
 
 int main(int argc, char** argv){
@@ -106,7 +120,7 @@ int main(int argc, char** argv){
 	}
 	
 	// initialize random seed
-	srand(time(NULL));
+	srand(time(nullptr));
 	
 	/***
 		set up background
@@ -133,7 +147,7 @@ int main(int argc, char** argv){
 	p1.sprite = pTex;
 	
 	// add asteroid sprites
-    Asteroid a1{20, 34, false, 0.0f, {0.f, 0.f}, nullptr};
+    Asteroid a1{50, 44, false, 0.0f, {-1.2f, 0.9f}, nullptr};
     Asteroid a2{70, 80, false, 0.0f, {1.2f, 1.5f}, nullptr};
 	SDL_Texture* ast1 = loadTexture("asteroidSprite1.bmp", renderer);
 	SDL_Texture* ast2 = loadTexture("asteroidSprite2.bmp", renderer);
@@ -149,6 +163,12 @@ int main(int argc, char** argv){
 
 	// show on screen 
 	SDL_RenderPresent(renderer);
+    
+    // add asteroids to a queue so we can process them in the event loop
+    // using a queue to easily handle many of them
+    std::vector<Asteroid*> asteroids;
+    asteroids.push_back(&a1);
+    asteroids.push_back(&a2);
 	
 	/***		
 		BEGIN EVENT LOOP 
@@ -189,17 +209,12 @@ int main(int argc, char** argv){
 		// redraw the sprites
         angle = (angle == 360 ? 0 : angle+1);
         renderTexture(p1.sprite, renderer, p1.x, p1.y, angle);
-        
-        renderTexture(a1.sprite, renderer, a1.x, a1.y, 0);
 
-        // move asteroid
-        a2.x += a2.direction.x;
-        a2.y += a2.direction.y;
-        if(a2.y > SCREEN_HEIGHT || a2.x > SCREEN_WIDTH){
-            a2.y = -a2.direction.y;
-            a2.x = -a2.direction.x;
+        // move asteroids
+        for(Asteroid* ast : asteroids){
+            moveAsteroid(ast);
+            renderTexture(ast->sprite, renderer, ast->x, ast->y, 0);
         }
-        renderTexture(a2.sprite, renderer, a2.x, a2.y, -angle);
 		
 		// update screen 
 		SDL_RenderPresent(renderer);

@@ -53,5 +53,4 @@ bool Sphere::hit(const Ray& ray, double t_min, double t_max, HitRecord& rec) con
     return true;
 }
 
-
 #endif

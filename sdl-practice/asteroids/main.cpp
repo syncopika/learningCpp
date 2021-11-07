@@ -21,6 +21,7 @@ struct Vec2 {
 struct Asteroid {
     int x;
     int y;
+    int mass;
     bool isSplit; // if the asteroid has been split already (so is it a whole asteroid or fragment)
     float velocity;
     Vec2 direction; // direction of asteroid
@@ -31,6 +32,7 @@ struct Player {
     int x;
     int y;
     int score;
+    int health;
     float velocity;
     Vec2 direction; // direction player is facing
     SDL_Texture* sprite;
@@ -84,15 +86,47 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, double rot
 }
 
 void moveAsteroid(Asteroid* asteroid){
-    asteroid->x += asteroid->direction.x;
-    asteroid->y += asteroid->direction.y;
-    if(asteroid->y > SCREEN_HEIGHT || asteroid->x > SCREEN_WIDTH){
+    double theta = atan2((double)asteroid->direction.y, (double)asteroid->direction.x); // in radians
+    int yVelocityComponent = asteroid->velocity * sin(theta);
+    int xVelocityComponent = asteroid->velocity * cos(theta);
+    
+    asteroid->x += xVelocityComponent; //asteroid->direction.x;
+    asteroid->y += yVelocityComponent; //asteroid->direction.y;
+    
+    if(asteroid->y > SCREEN_HEIGHT){
         asteroid->y = -30;
+    }else if(asteroid->x > SCREEN_WIDTH){
         asteroid->x = -30;
     }else if(asteroid->y < -50){
         asteroid->y = SCREEN_HEIGHT-10; 
     }else if(asteroid->x < -50){
         asteroid->x = SCREEN_WIDTH-10;
+    }
+}
+
+bool hasCollision(Asteroid* a, Asteroid* b){
+    int width = 60;
+    int height = 60;
+    //std::cout << "a->x: " << a->x << ", b->x: " << b->x << '\n';
+    bool withinX = a->x <= (b->x + width) && (a->x + width) >= b->x;
+    bool withinY = a->y <= (b->y + height) && (b->y + height) <= (a->y + height);
+    return withinX && withinY;
+}
+
+void handleCollisions(Player& p, std::vector<Asteroid*>& asteroids){
+    // for now work out collisions between asteroids only
+    for(size_t i = 0; i < asteroids.size() - 1; i++){
+        for(size_t j = i+1; j < asteroids.size(); j++){
+            //std::cout << "testing " << i << " and " << j << '\n';
+            Asteroid* a = asteroids[i];
+            Asteroid* b = asteroids[j];
+            // see if asteroid a and asteroid b should have a collision
+            if(hasCollision(a, b)){
+                //std::cout << "collision!\n";
+                SDL_SetTextureColorMod(a->sprite, 255, 0, 0);
+                SDL_SetTextureColorMod(b->sprite, 0, 255, 0);
+            }
+        }
     }
 }
 
@@ -139,7 +173,7 @@ int main(int argc, char** argv){
 	/***
 		set up the player
 	***/
-    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0.0f, {0.f, 0.f}, nullptr};
+    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, 0.0f, {0.f, 0.f}, nullptr};
 	SDL_Texture* pTex = loadTexture("playerSprite.bmp", renderer);
 	if(pTex == nullptr){
 		return 1;
@@ -147,8 +181,10 @@ int main(int argc, char** argv){
 	p1.sprite = pTex;
 	
 	// add asteroid sprites
-    Asteroid a1{50, 44, false, 0.0f, {-1.2f, 0.9f}, nullptr};
-    Asteroid a2{70, 80, false, 0.0f, {1.2f, 1.5f}, nullptr};
+    Asteroid a1{50, 44, 20, false, 1.5f, {-1.2f, 0.9f}, nullptr};
+    Asteroid a2{70, 80, 10, false, 1.7f, {1.2f, 1.5f}, nullptr};
+    Asteroid a3{90, 280, 25, false, 1.4f, {-1.4f, -1.5f}, nullptr};
+    
 	SDL_Texture* ast1 = loadTexture("asteroidSprite1.bmp", renderer);
 	SDL_Texture* ast2 = loadTexture("asteroidSprite2.bmp", renderer);
 	if(ast1 == nullptr || ast2 == nullptr){
@@ -160,6 +196,7 @@ int main(int argc, char** argv){
 	}
     a1.sprite = ast1;
     a2.sprite = ast2;
+    a3.sprite = ast1;
 
 	// show on screen 
 	SDL_RenderPresent(renderer);
@@ -169,6 +206,7 @@ int main(int argc, char** argv){
     std::vector<Asteroid*> asteroids;
     asteroids.push_back(&a1);
     asteroids.push_back(&a2);
+    asteroids.push_back(&a3);
 	
 	/***		
 		BEGIN EVENT LOOP 
@@ -211,6 +249,7 @@ int main(int argc, char** argv){
         renderTexture(p1.sprite, renderer, p1.x, p1.y, angle);
 
         // move asteroids
+        handleCollisions(p1, asteroids);
         for(Asteroid* ast : asteroids){
             moveAsteroid(ast);
             renderTexture(ast->sprite, renderer, ast->x, ast->y, 0);

@@ -1,0 +1,4 @@
+got the idea for making this while watching Casey Muratori's interview with Mike Action at HandmadeCon 2015 (https://www.youtube.com/watch?v=qWJpI2adCcs)
+(at around 1:01:35 Casey Muratori mentions it)
+
+https://stackoverflow.com/questions/345838/ball-to-ball-collision-detection-and-handling

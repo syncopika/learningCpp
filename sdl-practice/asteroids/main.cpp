@@ -4,6 +4,7 @@
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #define PI 3.14159265
@@ -23,8 +24,7 @@ struct Asteroid {
     int y;
     int mass;
     bool isSplit; // if the asteroid has been split already (so is it a whole asteroid or fragment)
-    float velocity;
-    Vec2 direction; // direction of asteroid
+    Vec2 velocity; // velocity of asteroid (the magnitude of the vector (sqrt(x^2 + y^2)) represents the speed)
     SDL_Texture* sprite;
 };
 
@@ -33,8 +33,7 @@ struct Player {
     int y;
     int score;
     int health;
-    float velocity;
-    Vec2 direction; // direction player is facing
+    Vec2 velocity; // remember that velocity is speed and direction
     SDL_Texture* sprite;
 };
 
@@ -86,12 +85,13 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, double rot
 }
 
 void moveAsteroid(Asteroid* asteroid){
-    double theta = atan2((double)asteroid->direction.y, (double)asteroid->direction.x); // in radians
-    int yVelocityComponent = asteroid->velocity * sin(theta);
-    int xVelocityComponent = asteroid->velocity * cos(theta);
+    double theta = atan2((double)asteroid->velocity.y, (double)asteroid->velocity.x); // in radians
+    int speed = sqrt((asteroid->velocity.y*asteroid->velocity.y) + (asteroid->velocity.x*asteroid->velocity.x));
+    int ySpeedComponent = speed*sin(theta);
+    int xSpeedComponent = speed*cos(theta);
     
-    asteroid->x += xVelocityComponent; //asteroid->direction.x;
-    asteroid->y += yVelocityComponent; //asteroid->direction.y;
+    asteroid->x += xSpeedComponent; //asteroid->direction.x;
+    asteroid->y += ySpeedComponent; //asteroid->direction.y;
     
     if(asteroid->y > SCREEN_HEIGHT){
         asteroid->y = -30;
@@ -104,9 +104,73 @@ void moveAsteroid(Asteroid* asteroid){
     }
 }
 
+float dotProduct(Vec2& a, Vec2& b){
+    return (a.x * b.x) + (a.y * b.y);
+}
+
+// https://www.vobarian.com/collisions/2dcollisions2.pdf
+std::pair<Vec2, Vec2> getFinalVelocities(Asteroid* a, Asteroid* b){
+    int radius = 25; // estimated radius of each asteroid. TODO: get a more accurate number
+    int aCenterX = a->x + radius;
+    int aCenterY = a->y + radius;
+    int bCenterX = b->x + radius;
+    int bCenterY = b->y + radius;
+    int xDiff = bCenterX - aCenterX;
+    int yDiff = bCenterY - aCenterY;
+    float hyp = sqrt(xDiff*xDiff + yDiff*yDiff);
+    
+    Vec2 unitNormal{xDiff/hyp, yDiff/hyp};
+    Vec2 unitTangent{-unitNormal.y, unitNormal.x};
+    
+    float aInitialVelocityNormal = dotProduct(unitNormal, a->velocity);
+    float aInitialVelocityTangent = dotProduct(unitTangent, a->velocity);
+    float bInitialVelocityNormal = dotProduct(unitNormal, b->velocity);
+    float bInitialVelocityTangent = dotProduct(unitTangent, b->velocity);
+    
+    float aFinalVelocityNormal = (
+        aInitialVelocityNormal*(a->mass - b->mass) + 
+        2*b->mass*bInitialVelocityNormal) / 
+        (a->mass + b->mass);
+    
+    float bFinalVelocityNormal = (
+        bInitialVelocityNormal*(b->mass - a->mass) + 
+        2*a->mass*aInitialVelocityNormal) / 
+        (a->mass + b->mass);
+        
+    Vec2 aFinalVelocityNormalVec{
+        aFinalVelocityNormal*unitNormal.x, 
+        aFinalVelocityNormal*unitNormal.y
+    };
+    
+    Vec2 aFinalVelocityTangentVec{
+        aInitialVelocityTangent*unitTangent.x, 
+        aInitialVelocityTangent*unitTangent.y
+    };
+    
+    Vec2 bFinalVelocityNormalVec{
+        bFinalVelocityNormal*unitNormal.x, 
+        bFinalVelocityNormal*unitNormal.y
+    };
+    Vec2 bFinalVelocityTangentVec{
+        bInitialVelocityTangent*unitTangent.x, 
+        bInitialVelocityTangent*unitTangent.y
+    };
+    
+    Vec2 aFinalVelocity{
+        aFinalVelocityNormalVec.x + aFinalVelocityTangentVec.x, 
+        aFinalVelocityNormalVec.y + aFinalVelocityTangentVec.y
+    };
+    Vec2 bFinalVelocity{
+        bFinalVelocityNormalVec.x + bFinalVelocityTangentVec.x, 
+        bFinalVelocityNormalVec.y + bFinalVelocityTangentVec.y
+    };
+    
+    return std::make_pair(aFinalVelocity, bFinalVelocity);
+}
+
 bool hasCollision(Asteroid* a, Asteroid* b){
-    int width = 60;
-    int height = 60;
+    int width = 50;
+    int height = 50;
     //std::cout << "a->x: " << a->x << ", b->x: " << b->x << '\n';
     bool withinX = a->x <= (b->x + width) && (a->x + width) >= b->x;
     bool withinY = a->y <= (b->y + height) && (b->y + height) <= (a->y + height);
@@ -121,7 +185,7 @@ void handleCollisions(Player& p, std::vector<Asteroid*>& asteroids){
             Asteroid* a = asteroids[i];
             Asteroid* b = asteroids[j];
             // see if asteroid a and asteroid b should have a collision
-            if(hasCollision(a, b)){
+            if(hasCollision(a, b) || hasCollision(b,a)){
                 //std::cout << "collision!\n";
                 SDL_SetTextureColorMod(a->sprite, 255, 0, 0);
                 SDL_SetTextureColorMod(b->sprite, 0, 255, 0);
@@ -173,7 +237,7 @@ int main(int argc, char** argv){
 	/***
 		set up the player
 	***/
-    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, 0.0f, {0.f, 0.f}, nullptr};
+    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, {0.f, 0.f}, nullptr};
 	SDL_Texture* pTex = loadTexture("playerSprite.bmp", renderer);
 	if(pTex == nullptr){
 		return 1;
@@ -181,9 +245,9 @@ int main(int argc, char** argv){
 	p1.sprite = pTex;
 	
 	// add asteroid sprites
-    Asteroid a1{50, 44, 20, false, 1.5f, {-1.2f, 0.9f}, nullptr};
-    Asteroid a2{70, 80, 10, false, 1.7f, {1.2f, 1.5f}, nullptr};
-    Asteroid a3{90, 280, 25, false, 1.4f, {-1.4f, -1.5f}, nullptr};
+    Asteroid a1{50, 44, 20, false, {-1.5f, 1.6f}, nullptr};
+    Asteroid a2{70, 80, 10, false, {1.8f, 1.8f}, nullptr};
+    Asteroid a3{90, 280, 25, false, {-1.4f, -1.5f}, nullptr};
     
 	SDL_Texture* ast1 = loadTexture("asteroidSprite1.bmp", renderer);
 	SDL_Texture* ast2 = loadTexture("asteroidSprite2.bmp", renderer);

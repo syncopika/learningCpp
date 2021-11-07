@@ -8,10 +8,6 @@
 class Vec3 {
 	private:
 		double coords[3];
-		
-		double length_squared() const {
-			return coords[0]*coords[0] + coords[1]*coords[1] + coords[2]*coords[2];
-		}
 
 	public:
 		Vec3() : coords{0,0,0} {} // list initialization in constructor
@@ -66,6 +62,19 @@ class Vec3 {
 		double length() const {
 			return std::sqrt(length_squared());
 		}
+        
+		double length_squared() const {
+			return coords[0]*coords[0] + coords[1]*coords[1] + coords[2]*coords[2];
+		}
+        
+        // static methods
+        static Vec3 random() {
+            return Vec3(random_double(), random_double(), random_double());
+        }
+        
+        static Vec3 random(double min, double max) {
+            return Vec3(random_double(min, max), random_double(min, max), random_double(min, max));
+        }
 };
 
 // type aliases for other 3 dimensional things
@@ -123,6 +132,15 @@ Vec3 cross(const Vec3& u, const Vec3& v){
 
 Vec3 unit_vector(Vec3 v){
 	return v / v.length();
+}
+
+// keep trying new points until we get one within the sphere (length_squared < 1)
+Vec3 random_in_unit_sphere() {
+    while (true) {
+        auto p = Vec3::random(-1, 1);
+        if (p.length_squared() >= 1) continue;
+        return p;
+    }
 }
 
 // std::cout << v1

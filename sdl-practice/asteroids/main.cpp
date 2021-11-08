@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <math.h>
+#include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -14,6 +15,11 @@ const int SCREEN_HEIGHT = 480;
 const int SPRITE_WIDTH = 34;
 const int SPRITE_HEIGHT = 32;
 
+static float timeElapsed = 0.f; // for controlling the player's velocity
+static bool isMoving = false; // for controlling player movement
+
+enum Direction { LEFT, RIGHT, UP, DOWN, NONE };
+
 struct Vec2 {
     float x;
     float y;
@@ -24,7 +30,7 @@ struct Asteroid {
     int y;
     int mass;
     bool isSplit; // if the asteroid has been split already (so is it a whole asteroid or fragment)
-    Vec2 velocity; // velocity of asteroid (the magnitude of the vector (sqrt(x^2 + y^2)) represents the speed)
+    Vec2 velocity; // velocity of asteroid (the magnitude of the vector (sqrt(x^2 + y^2)) represents the speed). we can also get direction via atan2 and x and y
     SDL_Texture* sprite;
 };
 
@@ -33,12 +39,88 @@ struct Player {
     int y;
     int score;
     int health;
-    Vec2 velocity; // remember that velocity is speed and direction
+    float speed;
+    Vec2 forward; // the direction the player is facing. should be a unit vector
     SDL_Texture* sprite;
 };
 
 void logSDLError(std::ostream &os, const std::string &msg){
 	os << msg << " error: " << SDL_GetError() << std::endl;
+}
+
+/* Direction determineMovement(const Uint8* state){
+    if(state[SDL_SCANCODE_LEFT]){
+        return LEFT;
+    }else if(state[SDL_SCANCODE_RIGHT]){
+        return RIGHT;
+    }else if(state[SDL_SCANCODE_UP]){
+        return UP;
+    }else if(state[SDL_SCANCODE_DOWN]){
+        return DOWN;
+    }
+    return NONE;
+}
+ */
+double getTimeNowInMilliseconds(){
+    // https://stackoverflow.com/questions/9089842/c-chrono-system-time-in-milliseconds-time-operations
+    // https://stackoverflow.com/questions/57538507/how-to-convert-stdchronoduration-to-double-seconds
+    std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
+    auto duration = now.time_since_epoch();
+    double ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    return ms;
+}
+
+// linear ramp to max speed
+// it takes 2 seconds to reach max speed from 0
+// and also slows down to 0 in 2 seconds
+// max speed is set to 
+void linearRampToMaxSpeed(Player& p, double currentTimeElapsed){
+    // do some linear interpolation to figure out how fast the player should be right now
+    // we need to modify their velocity Vec2
+    // we can get the slope from the velocity (i.e. velocity.y / velocity.x)
+    // from there we get y = (velocity.y / velocity.x)*x and we can plug in current time for x.
+    
+    // if currentTimeElapsed > 2 seconds, stay on max speed
+    if(currentTimeElapsed < 2000){
+    }
+}
+
+void movePlayer(Player& p, Direction dir){
+    if(dir != NONE){
+        if(dir == UP){
+            if(isMoving){
+                // increase velocity gradually to some maximum
+            }else{
+                isMoving = true;
+            }
+        }else if(dir == LEFT){
+            // rotate left
+            float newAngle = -1/(PI*2); // 1 radian
+            float cosAngle = cos(newAngle);
+            float sinAngle = sin(newAngle);
+            
+            // rotating the forward vector
+            float newForwardX = cosAngle*p.forward.x - sinAngle*p.forward.y;
+            float newForwardY = sinAngle*p.forward.x + cosAngle*p.forward.y;
+            
+            p.forward.x = newForwardX;
+            p.forward.y = newForwardY;
+        }else if(dir == RIGHT){
+            // rotate right
+            float newAngle = 1/(PI*2); // 1 radian
+            float cosAngle = cos(newAngle);
+            float sinAngle = sin(newAngle);
+            
+            float newForwardX = cosAngle*p.forward.x - sinAngle*p.forward.y;
+            float newForwardY = sinAngle*p.forward.x + cosAngle*p.forward.y;
+            
+            p.forward.x = newForwardX;
+            p.forward.y = newForwardY;
+        }else if(dir == NONE){
+            isMoving = false;
+            timeElapsed = 0.f;
+        }
+    }
 }
 
 SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
@@ -87,6 +169,7 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, double rot
 void moveAsteroid(Asteroid* asteroid){
     double theta = atan2((double)asteroid->velocity.y, (double)asteroid->velocity.x); // in radians
     int speed = sqrt((asteroid->velocity.y*asteroid->velocity.y) + (asteroid->velocity.x*asteroid->velocity.x));
+    
     int ySpeedComponent = speed*sin(theta);
     int xSpeedComponent = speed*cos(theta);
     
@@ -165,13 +248,31 @@ std::pair<Vec2, Vec2> getFinalVelocities(Asteroid* a, Asteroid* b){
         bFinalVelocityNormalVec.y + bFinalVelocityTangentVec.y
     };
     
+    
+    // TODO: figure out a better way but this seems to help
+    // prevent asteroids from reaching a velocity that seems like 0 (so they appear to freeze) after a collision
+    if(aFinalVelocity.x < 1 || aFinalVelocity.x < 0){
+        aFinalVelocity.x++;
+    }
+    
+    if(aFinalVelocity.y < 1 || aFinalVelocity.y < 0){
+        aFinalVelocity.y++;
+    }
+    
+    if(bFinalVelocity.x < 1 || bFinalVelocity.x < 0){
+        bFinalVelocity.x++;
+    }
+    
+    if(bFinalVelocity.y < 1 || bFinalVelocity.y < 0){
+        bFinalVelocity.y++;
+    }
+    
     return std::make_pair(aFinalVelocity, bFinalVelocity);
 }
 
 bool hasCollision(Asteroid* a, Asteroid* b){
-    int width = 50;
+    int width = 50; // TODO: don't hard code these values? should be taken from bmp image data
     int height = 50;
-    //std::cout << "a->x: " << a->x << ", b->x: " << b->x << '\n';
     bool withinX = a->x <= (b->x + width) && (a->x + width) >= b->x;
     bool withinY = a->y <= (b->y + height) && (b->y + height) <= (a->y + height);
     return withinX && withinY;
@@ -184,9 +285,13 @@ void handleCollisions(Player& p, std::vector<Asteroid*>& asteroids){
             //std::cout << "testing " << i << " and " << j << '\n';
             Asteroid* a = asteroids[i];
             Asteroid* b = asteroids[j];
+            
             // see if asteroid a and asteroid b should have a collision
             if(hasCollision(a, b) || hasCollision(b,a)){
-                //std::cout << "collision!\n";
+                std::pair<Vec2, Vec2> finalVelocities = getFinalVelocities(a, b);
+                a->velocity = finalVelocities.first;
+                b->velocity = finalVelocities.second;
+                
                 SDL_SetTextureColorMod(a->sprite, 255, 0, 0);
                 SDL_SetTextureColorMod(b->sprite, 0, 255, 0);
             }
@@ -237,7 +342,7 @@ int main(int argc, char** argv){
 	/***
 		set up the player
 	***/
-    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, {0.f, 0.f}, nullptr};
+    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, 0.f, {0.f, -1.f}, nullptr};
 	SDL_Texture* pTex = loadTexture("playerSprite.bmp", renderer);
 	if(pTex == nullptr){
 		return 1;
@@ -278,8 +383,6 @@ int main(int argc, char** argv){
 	bool quit = false; 
 	SDL_Event event;
 	//const Uint8 *keystate;
-    
-    double angle = 0;
 	
 	while(!quit){
 		// check for actions that will quit the program 
@@ -290,27 +393,38 @@ int main(int argc, char** argv){
 					quit = true;
 					break;
 				
-				/* pressing q or Esc on keyboard */
+				/* pressing q or Esc on keyboard and handles movement for player */
+                // we're avoiding SDL_GetKeyboardState because that registers multiples events for a single button press
+                // which we don't want in this case
 				case SDL_KEYDOWN:
 					switch (event.key.keysym.sym){
 						case SDLK_ESCAPE:
 						case SDLK_q:
 							quit = true;
 							break;
+                        case SDLK_LEFT:
+                            movePlayer(p1, LEFT);
+                            break;
+                        case SDLK_RIGHT:
+                            movePlayer(p1, RIGHT);
+                            break;
 					}
 				break;
 			}
 		}
-		
+        // redraw the background
+		renderTexture(bg, renderer, 0, 0, 0);
+        
 		// then handle sprite movement
 		//keystate = SDL_GetKeyboardState(NULL);
-	
-		// redraw the background
-		renderTexture(bg, renderer, 0, 0, 0);
 		
 		// redraw the sprites
-        angle = (angle == 360 ? 0 : angle+1);
-        renderTexture(p1.sprite, renderer, p1.x, p1.y, angle);
+        //angle = (angle == 360 ? 0 : angle+1);
+        //Direction dir = determineMovement(keystate);
+        //movePlayer(p1, dir);
+        
+        double currAngle = (atan2(p1.forward.y, p1.forward.x) * 180) / PI;
+        renderTexture(p1.sprite, renderer, p1.x, p1.y, currAngle);
 
         // move asteroids
         handleCollisions(p1, asteroids);

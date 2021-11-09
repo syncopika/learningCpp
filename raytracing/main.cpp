@@ -13,14 +13,18 @@ Color ray_color(const Ray& r, const Hittable& world, int depth) {
     
     // depth indicates the ray bounce limit. if we exceed it,
     // no more light is gathered
-    if (depth <= 0) {
+    if (depth == 0) {
         return Color(0,0,0);
     }
+    /*
+     if(world.hit(r, 0, infinity, rec)){
+        // show color based on normals
+        return 0.5 * (rec.normal + Color(1,1,1));
+    } */
     
     if(world.hit(r, 0, infinity, rec)) {
-        Point3 target = rec.p + rec.normal + random_in_unit_sphere();
-        
         // simulate diffuse bounce rays
+        Point3 target = rec.p + rec.normal + random_in_unit_sphere();
         return 0.5 * ray_color(Ray(rec.p, target - rec.p), world, depth-1);
     }
     

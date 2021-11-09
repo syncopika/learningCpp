@@ -1,4 +1,4 @@
-trying out the SDL library! :D     
+trying out the SDL2 library! :D     
     
 demo1: this demo demonstrates some features of SDL, such as image loading, image scaling, converting surface to texture, and handling some basic input like mouse clicks (the image changes on click).    
 ![screenshot of demo1](screenshots/sdl_demo1.gif "demo 1")    

@@ -15,7 +15,7 @@ const int SCREEN_HEIGHT = 480;
 const int SPRITE_WIDTH = 34;
 const int SPRITE_HEIGHT = 32;
 
-static float timeElapsed = 0.f; // for controlling the player's velocity
+static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start; // for controlling the player's velocity when the player presses the Up arrow key
 static bool isMoving = false; // for controlling player movement
 
 enum Direction { LEFT, RIGHT, UP, DOWN, NONE };
@@ -48,7 +48,7 @@ void logSDLError(std::ostream &os, const std::string &msg){
 	os << msg << " error: " << SDL_GetError() << std::endl;
 }
 
-/* Direction determineMovement(const Uint8* state){
+Direction determineMovement(const Uint8* state){
     if(state[SDL_SCANCODE_LEFT]){
         return LEFT;
     }else if(state[SDL_SCANCODE_RIGHT]){
@@ -60,42 +60,50 @@ void logSDLError(std::ostream &os, const std::string &msg){
     }
     return NONE;
 }
- */
-double getTimeNowInMilliseconds(){
-    // https://stackoverflow.com/questions/9089842/c-chrono-system-time-in-milliseconds-time-operations
-    // https://stackoverflow.com/questions/57538507/how-to-convert-stdchronoduration-to-double-seconds
-    std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
-    auto duration = now.time_since_epoch();
-    double ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-    return ms;
+
+double getTimeElapsed(){
+    // https://stackoverflow.com/questions/31487876/getting-a-time-difference-in-milliseconds
+    // https://stackoverflow.com/questions/728068/how-to-calculate-a-time-difference-in-c
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration<double, std::milli>(now - start).count();
 }
 
 // linear ramp to max speed
 // it takes 2 seconds to reach max speed from 0
 // and also slows down to 0 in 2 seconds
-// max speed is set to 
 void linearRampToMaxSpeed(Player& p, double currentTimeElapsed){
     // do some linear interpolation to figure out how fast the player should be right now
     // we need to modify their velocity Vec2
     // we can get the slope from the velocity (i.e. velocity.y / velocity.x)
     // from there we get y = (velocity.y / velocity.x)*x and we can plug in current time for x.
-    
-    // if currentTimeElapsed > 2 seconds, stay on max speed
-    if(currentTimeElapsed < 2000){
+    // if currentTimeElapsed > 3 seconds, stay on max speed
+    if(currentTimeElapsed < 3000){
+        float sec = currentTimeElapsed / 1000;
+        float newSpeed = pow(1.6f, sec)*1.2f;
+        p.speed = newSpeed > 5 ? 5 : newSpeed;
+    }
+}
+
+void linearRampToMinSpeed(Player& p, double currentTimeElapsed){
+    if(currentTimeElapsed < 3000){
+        float sec = currentTimeElapsed / 1000;
+        float newSpeed = pow(0.25f, sec)*2;
+        p.speed = newSpeed < 0 ? 0 : newSpeed;
     }
 }
 
 void movePlayer(Player& p, Direction dir){
     if(dir != NONE){
         if(dir == UP){
-            if(isMoving){
-                // increase velocity gradually to some maximum
-            }else{
+            if(!isMoving){
                 isMoving = true;
+                start = std::chrono::time_point_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now()
+                );
             }
         }else if(dir == LEFT){
             // rotate left
-            float newAngle = -1/(PI*2); // 1 radian
+            float newAngle = -(PI/4); // 45 deg
             float cosAngle = cos(newAngle);
             float sinAngle = sin(newAngle);
             
@@ -107,7 +115,7 @@ void movePlayer(Player& p, Direction dir){
             p.forward.y = newForwardY;
         }else if(dir == RIGHT){
             // rotate right
-            float newAngle = 1/(PI*2); // 1 radian
+            float newAngle = (PI/4); // 45 deg
             float cosAngle = cos(newAngle);
             float sinAngle = sin(newAngle);
             
@@ -116,9 +124,48 @@ void movePlayer(Player& p, Direction dir){
             
             p.forward.x = newForwardX;
             p.forward.y = newForwardY;
-        }else if(dir == NONE){
+        }
+        
+        if(isMoving){
+            // increase speed gradually to some maximum
+            double elapsedTime = getTimeElapsed();
+            linearRampToMaxSpeed(p, elapsedTime);
+            
+            // find the new x and y components of the current velocity
+            float forwardMagnitude = sqrt(p.forward.x*p.forward.x + p.forward.y*p.forward.y) * p.speed;
+            double angle = atan2(p.forward.y, p.forward.x);
+            double xComponent = cos(angle)*forwardMagnitude;
+            double yComponent = sin(angle)*forwardMagnitude;
+            
+            int newX = p.x + int(xComponent);
+            int newY = p.y + int(yComponent);
+            
+            p.x = newX;
+            p.y = newY;
+        }
+    }else{
+        // player is at rest
+        if(isMoving){
             isMoving = false;
-            timeElapsed = 0.f;
+            start = std::chrono::time_point_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now()
+            );
+        }
+        if(!isMoving && p.speed > 0.0){
+            double elapsedTime = getTimeElapsed();
+            linearRampToMinSpeed(p, elapsedTime);
+            
+            // find the new x and y components of the current velocity
+            float forwardMagnitude = sqrt(p.forward.x*p.forward.x + p.forward.y*p.forward.y) * p.speed;
+            double angle = atan2(p.forward.y, p.forward.x);
+            double xComponent = cos(angle)*forwardMagnitude;
+            double yComponent = sin(angle)*forwardMagnitude;
+            
+            int newX = p.x + int(xComponent);
+            int newY = p.y + int(yComponent);
+            
+            p.x = newX;
+            p.y = newY;
         }
     }
 }
@@ -247,7 +294,6 @@ std::pair<Vec2, Vec2> getFinalVelocities(Asteroid* a, Asteroid* b){
         bFinalVelocityNormalVec.x + bFinalVelocityTangentVec.x, 
         bFinalVelocityNormalVec.y + bFinalVelocityTangentVec.y
     };
-    
     
     // TODO: figure out a better way but this seems to help
     // prevent asteroids from reaching a velocity that seems like 0 (so they appear to freeze) after a collision
@@ -382,7 +428,7 @@ int main(int argc, char** argv){
 	***/
 	bool quit = false; 
 	SDL_Event event;
-	//const Uint8 *keystate;
+	const Uint8 *keystate;
 	
 	while(!quit){
 		// check for actions that will quit the program 
@@ -416,12 +462,14 @@ int main(int argc, char** argv){
 		renderTexture(bg, renderer, 0, 0, 0);
         
 		// then handle sprite movement
-		//keystate = SDL_GetKeyboardState(NULL);
+		keystate = SDL_GetKeyboardState(NULL);
 		
 		// redraw the sprites
         //angle = (angle == 360 ? 0 : angle+1);
-        //Direction dir = determineMovement(keystate);
-        //movePlayer(p1, dir);
+        Direction dir = determineMovement(keystate);
+        if(dir == UP || dir == NONE){
+            movePlayer(p1, dir);
+        }
         
         double currAngle = (atan2(p1.forward.y, p1.forward.x) * 180) / PI;
         renderTexture(p1.sprite, renderer, p1.x, p1.y, currAngle);

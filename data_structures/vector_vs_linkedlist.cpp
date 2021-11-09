@@ -13,6 +13,7 @@
 // I guess it's a bit of a no-brainer that indexing (and traversal?) in arrays is faster
 // but would be nice to have real data to prove it
 // I'm interested in testing lookup and traversal speed
+// TODO: lookup speed
 
 void prepDataStructures(int* array, std::vector<int>& vec, std::list<int>& list){
     for(int i = 0; i < SIZE; i++){
@@ -51,21 +52,21 @@ std::tuple<double, double, double> testRunSum(){
     
     prepDataStructures(array, vector, list);
     
-    // test vector
+    // test vector traversal via sum
     auto start = std::chrono::high_resolution_clock::now();
     long r1 = sum(vector);
     auto stop = std::chrono::high_resolution_clock::now();
     double res1 = getTimeDiff(start, stop);
     std::cout << "time for sum (" << r1 << ") over std::vector: " << res1 << " s. \n";
     
-    // test linked list
+    // test linked list traversal via sum
     start = std::chrono::high_resolution_clock::now();
     long r2 = sum(list);
     stop = std::chrono::high_resolution_clock::now();
     double res2 = getTimeDiff(start, stop);
     std::cout << "time for sum (" << r2 << ") over std::list: " << res2 << " s. \n";
     
-    // test regular array
+    // test regular array traversal via sum
     long arraySum = 0;
     start = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < SIZE; i++){

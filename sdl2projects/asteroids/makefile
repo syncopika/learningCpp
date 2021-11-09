@@ -2,8 +2,8 @@
 
 CXX = g++
 
-SDL_LIB = -LC:/SDL2/lib -lSDL2main -lSDL2
-SDL_INCLUDE = -IC:/SDL2/include
+SDL_LIB = -LC:/libraries/SDL2-2.0.10/i686-w64-mingw32/lib -lSDL2main -lSDL2
+SDL_INCLUDE = -IC:/libraries/SDL2-2.0.10/i686-w64-mingw32/include
 
 CXXFLAGS = -Wall -c -std=c++14 $(SDL_INCLUDE)
 LDFLAGS = -lmingw32 -static-libstdc++ -static-libgcc $(SDL_LIB)

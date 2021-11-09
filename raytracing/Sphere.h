@@ -37,9 +37,9 @@ bool Sphere::hit(const Ray& ray, double t_min, double t_max, HitRecord& rec) con
     auto sqrtd = sqrt(discriminant);
     
     // find the nearest root within the acceptable range
-    auto t = (-b + sqrtd) / (2*a); // following quadratic formula
+    auto t = (-b - sqrtd) / (2*a); // following quadratic formula
     if (t < t_min || t > t_max) {
-        t = (-b - sqrtd) / (2*a);
+        t = (-b + sqrtd) / (2*a);
         if(t < t_min || t > t_max){
             return false;
         }

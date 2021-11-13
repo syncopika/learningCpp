@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <math.h>
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
@@ -327,7 +328,8 @@ std::pair<Vec2, Vec2> getFinalVelocities(Asteroid* a, Asteroid* b){
     return std::make_pair(aFinalVelocity, bFinalVelocity);
 }
 
-bool hasCollision(Asteroid* a, Asteroid* b){
+template <class T, class S>
+bool hasCollision(T* a, S* b){
     int width = 50; // TODO: don't hard code these values? should be taken from bmp image data
     int height = 50;
     bool withinX = a->x <= (b->x + width) && (a->x + width) >= b->x;
@@ -335,24 +337,50 @@ bool hasCollision(Asteroid* a, Asteroid* b){
     return withinX && withinY;
 }
 
-void handleCollisions(Player& p, std::vector<Asteroid*>& asteroids){
+void handleAsteroidCollisions(Player& p, std::set<Asteroid*>& asteroids){
     // for now work out collisions between asteroids only
-    for(size_t i = 0; i < asteroids.size() - 1; i++){
-        for(size_t j = i+1; j < asteroids.size(); j++){
-            //std::cout << "testing " << i << " and " << j << '\n';
-            Asteroid* a = asteroids[i];
-            Asteroid* b = asteroids[j];
-            
-            // see if asteroid a and asteroid b should have a collision
-            if(hasCollision(a, b) || hasCollision(b,a)){
-                std::pair<Vec2, Vec2> finalVelocities = getFinalVelocities(a, b);
-                a->velocity = finalVelocities.first;
-                b->velocity = finalVelocities.second;
-                
-                SDL_SetTextureColorMod(a->sprite, 255, 0, 0);
-                SDL_SetTextureColorMod(b->sprite, 0, 255, 0);
+    for(Asteroid* a : asteroids){
+        for(Asteroid* b : asteroids){
+            if(a != b){
+                // see if asteroid a and asteroid b should have a collision
+                if(hasCollision(a, b)){
+                    std::pair<Vec2, Vec2> finalVelocities = getFinalVelocities(a, b);
+                    a->velocity = finalVelocities.first;
+                    b->velocity = finalVelocities.second;
+                    
+                    SDL_SetTextureColorMod(a->sprite, 255, 0, 0);
+                    SDL_SetTextureColorMod(b->sprite, 0, 255, 0);
+                }
             }
         }
+    }
+}
+
+void handleLaserCollisions(std::set<Laser*>& lasers, std::set<Asteroid*>& asteroids){
+    std::vector<Laser*> lasersToRemove;
+    std::vector<Asteroid*> asteroidsToRemove;
+    std::vector<Asteroid*> newAsteroidsToAdd;
+    for(Laser* l : lasers){
+        for(Asteroid* a : asteroids){
+            if(hasCollision(l, a)){
+                //std::cout << "lsr collision!\n";
+                // TODO: split the asteroid into 2 if split is false
+                // should we just allocate all asteroids as smart pointers? and lasers too
+                
+                // remove the asteroid
+                asteroidsToRemove.push_back(a);
+                lasersToRemove.push_back(l);
+            }
+        }
+        
+        for(Asteroid* remove : asteroidsToRemove){
+            asteroids.erase(remove);
+        }
+    }
+    
+    for(Laser* las : lasersToRemove){
+        lasers.erase(las);
+        delete las;
     }
 }
 
@@ -453,10 +481,10 @@ int main(int argc, char** argv){
     
     // add asteroids to a queue so we can process them in the event loop
     // using a queue to easily handle many of them
-    std::vector<Asteroid*> asteroids;
-    asteroids.push_back(&a1);
-    asteroids.push_back(&a2);
-    asteroids.push_back(&a3);
+    std::set<Asteroid*> asteroids;
+    asteroids.insert(&a1);
+    asteroids.insert(&a2);
+    asteroids.insert(&a3);
     
     /***        
         BEGIN EVENT LOOP 
@@ -519,27 +547,37 @@ int main(int argc, char** argv){
         
         double currAngle = (atan2(p1.forward.y, p1.forward.x) * 180) / PI;
         renderTexture(p1.sprite, renderer, p1.x, p1.y, currAngle);
-
-        // move asteroids
-        handleCollisions(p1, asteroids);
-        for(Asteroid* ast : asteroids){
-            moveAsteroid(ast);
-            renderTexture(ast->sprite, renderer, ast->x, ast->y, 0);
-        }
         
         // handle lasers
         std::vector<Laser*> toRemove;
         for(Laser* l : p1.lasers){
-            if(l->x > SCREEN_WIDTH + l->height || 
-               l->x < 0 - l->height ||
-               l->y > SCREEN_HEIGHT + l->height){
+            if(l->x >= SCREEN_WIDTH + l->height || 
+               l->x <= 0 - l->height ||
+               l->y >= SCREEN_HEIGHT + l->height ||
+               l->y <= 0 - l->height){
+                   //std::cout << "time to remove a laser\n";
                    toRemove.push_back(l);
             }else{
                 moveLaser(l);
-                renderTexture(l->sprite, renderer, l->x, l->y, 0);
+                renderTexture(l->sprite, renderer, l->x, l->y, currAngle);
             }
         }
         // remove lasers (use std::for_each and lambda?)
+        auto lambda = [&](Laser* las){ 
+            //std::cout << "removing laser: " << las << '\n';
+            p1.lasers.erase(las);
+            delete las; // TODO: make lasers smart pointers so we don't have to do this
+        };
+        std::for_each(toRemove.begin(), toRemove.end(), lambda);
+        
+        handleLaserCollisions(p1.lasers, asteroids);
+        
+        // move asteroids
+        handleAsteroidCollisions(p1, asteroids);
+        for(Asteroid* ast : asteroids){
+            moveAsteroid(ast);
+            renderTexture(ast->sprite, renderer, ast->x, ast->y, 0);
+        }
         
         // update screen 
         SDL_RenderPresent(renderer);

@@ -6,4 +6,5 @@ https://stackoverflow.com/questions/345838/ball-to-ball-collision-detection-and-
 // todo
 - collision detection with player
 - more efficient collision detection? like using a quadtree? :D
-- possible to get smoother movement, especially when turning?
+- possible to get smoother movement, especially when turning? (be able 'drift' like in the real asteroids game)
+- don't have lasers rotate with the player after being fired lol

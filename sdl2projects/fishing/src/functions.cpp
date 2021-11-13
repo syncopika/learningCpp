@@ -16,7 +16,6 @@ void logSDLError(std::ostream &os, const std::string &msg){
 * load a texture 
 */
 SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
-	
 	// initialize texture to null first 
 	SDL_Texture *texture = nullptr;
 	
@@ -51,7 +50,7 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
 /**
 * render a texture 
 */
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int Direction){
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, Direction dir){
 	// set up a destination rectangle to be at the position given by x and y 
 	SDL_Rect dst;
 	dst.x = x;
@@ -61,11 +60,11 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int Direct
 	// the rectangle will take on the width and height of the texture 
 	SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
 	
-	if(Direction == UP){
+	if(dir == UP){
 		SDL_RenderCopyEx(ren, tex, NULL, &dst, 0, NULL, SDL_FLIP_VERTICAL);
-	}else if(Direction == LEFT){
+	}else if(dir == LEFT){
 		SDL_RenderCopyEx(ren, tex, NULL, &dst, 90, NULL, SDL_FLIP_NONE);
-	}else if(Direction == RIGHT){
+	}else if(dir == RIGHT){
 		SDL_RenderCopyEx(ren, tex, NULL, &dst, 270, NULL, SDL_FLIP_NONE);
 	}else{
 		SDL_RenderCopyEx(ren, tex, NULL, &dst, 0, NULL, SDL_FLIP_NONE);
@@ -85,11 +84,10 @@ void cleanup(SDL_Window* win, SDL_Texture* background, SDL_Renderer* ren){
 /**
 * determine movement for sprite  
 **/
-int determineMovement(Character& character, const Uint8 *state){
-	
+Direction determineMovement(Character& character, const Uint8 *state){
 	int x = character.getXPos();
 	int y = character.getYPos();
-	int direction = NONE;
+	Direction direction = NONE;
 	
 	if(state[SDL_SCANCODE_LEFT]){
 		character.setXPos(x - 5);
@@ -122,5 +120,4 @@ int determineMovement(Character& character, const Uint8 *state){
 	}
 	
 	return direction;
-	
 }

@@ -1,0 +1,10 @@
+got the idea for making this while watching Casey Muratori's interview with Mike Acton at HandmadeCon 2015 (https://www.youtube.com/watch?v=qWJpI2adCcs)
+At around 1:01:35 Casey Muratori mentions it.
+
+https://stackoverflow.com/questions/345838/ball-to-ball-collision-detection-and-handling
+
+// todo
+- collision detection with player
+- more efficient collision detection? like using a quadtree? :D
+- possible to get smoother movement, especially when turning? (be able 'drift' like in the real asteroids game)
+- don't have lasers rotate with the player after being fired lol

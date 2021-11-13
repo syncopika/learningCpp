@@ -113,14 +113,12 @@ int main(int argc, char** argv){
 	
 	// keep track of what step to alternate to for the walking sprite
 	int currentStep = 0;
-	int direction = -1;
-	int lastDirection = direction;
+	Direction direction = NONE;
+	Direction lastDirection = direction;
 	
 	while(!quit){
-		
 		// check for actions that will quit the program 
 		if(SDL_PollEvent(&event)){
-			
 			switch(event.type){
 				
 				/* clicking on the X button on top right of screen */
@@ -202,8 +200,7 @@ int main(int argc, char** argv){
 		// implement fishing here! 
 		// if player hits one of the borders of the water, and they press the spacebar,
 		// the character should fish for 2 seconds 
-		if(keystate[SDL_SCANCODE_SPACE]){ 
-			
+		if(keystate[SDL_SCANCODE_SPACE]){
 			// check if character is adjacent to the water 
 			// these coordinates represent the expanded box around the character
 			if(lastDirection == UP){
@@ -232,7 +229,6 @@ int main(int argc, char** argv){
 			(southPointX < xMaxWater && southPointX > xMinWater && southPointY < yMaxWater && southPointY > yMinWater) ||
 			(westPointX < xMaxWater && westPointX > xMinWater && westPointY < yMaxWater && westPointY > yMinWater) ||
 			(eastPointX < xMaxWater && eastPointX > xMinWater && eastPointY < yMaxWater && eastPointY > yMinWater)){
-				
 				// redraw everything but this time with the fishing sprite 
 				renderTexture(bg, renderer, 0, 0, NONE);
 				renderTexture(water.getTexture(), renderer,  water.getXPos(), water.getYPos(), NONE);
@@ -257,7 +253,6 @@ int main(int argc, char** argv){
 				}
 			}
 		}
-
 
 		// redraw the background
 		SDL_Delay(50);

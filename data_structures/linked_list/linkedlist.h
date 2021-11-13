@@ -1,7 +1,7 @@
 // linkedlist.h
 
-// create a Node class
-// allow for generics!
+#ifndef LINKED_LIST_H
+#define LINKED_LIST_H
 
 template<class T>
 class Node {
@@ -9,22 +9,26 @@ class Node {
 // private instance variables
 // value to hold a node's data, and next to point to the next node 
 private:
-  T value; // allow for generics! - should it be a reference? what if the value is an object? 
+  T value;
   Node *next; // a pointer to the next node 
   
 public:
   // constructor
-  Node(T val);
+  // note that since we want references passed in (to prevent excessive copying, especially for big objects/structs), 
+  // we have to make it const as well because we might be passing in a temporary object (e.g. some int like 5 or a string)
+  Node(const T& val);
   
   // destructor
   ~Node();
   
   // setters
-  void setValue(T val);
+  void setValue(const T& val);
   void setNext(Node* n); // accept a reference to another node 
 
   // getters
-  T getValue();
-  Node* getNext();
+  T& getValue() const;
+  Node* getNext() const;
   
 };
+
+#endif

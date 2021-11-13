@@ -4,13 +4,17 @@
 
 #include "Tree.h"
 
+#include <iostream>
+#include <memory>
+#include <utility>
+
 template <class T>
 struct BstNode
 {
   T value;
-  BstNode<T>* left;
-  BstNode<T>* right;
-        
+  std::unique_ptr<BstNode<T>> left;
+  std::unique_ptr<BstNode<T>> right;
+  
   BstNode(const T& value);
         
   ~BstNode();
@@ -21,13 +25,14 @@ class BinarySearchTree : public Tree<T>
 {
   private:
     // helper methods
-    BstNode<T>* addHelper(const T& val, BstNode<T>* node);
-    bool removeHelper(const T& val, BstNode<T>* node);
-    bool findHelper(const T& valToFind, BstNode<T>* node, bool result);
-    void traverseHelper(BstNode<T>* node);
+    std::unique_ptr<BstNode<T>> addHelper(const T& val, std::unique_ptr<BstNode<T>>& node);
+    bool removeHelper(const T& val, std::unique_ptr<BstNode<T>>& node);
+    bool findHelper(const T& valToFind, std::unique_ptr<BstNode<T>>& node, bool result);
+    void traverseHelper(std::unique_ptr<BstNode<T>>& node);
 
   public:
-    BstNode<T>* root;
+    int size;
+    std::unique_ptr<BstNode<T>> root;
     
     // constructor
     BinarySearchTree();

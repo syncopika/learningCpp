@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,13 +35,23 @@ struct Asteroid {
     SDL_Texture* sprite;
 };
 
+struct Laser {
+    int x;
+    int y;
+    int width;
+    int height;
+    Vec2 forward;
+    SDL_Texture* sprite;
+};
+
 struct Player {
     int x;
     int y;
     int score;
     int health;
     float speed;
-    Vec2 forward; // the direction the player is facing. should be a unit vector
+    Vec2 forward;             // the direction the player is facing. should be a unit vector
+    std::set<Laser*> lasers; // keep track of the lasers the player has fired
     SDL_Texture* sprite;
 };
 
@@ -345,6 +356,18 @@ void handleCollisions(Player& p, std::vector<Asteroid*>& asteroids){
     }
 }
 
+void fireLaser(Player& p, SDL_Texture* laserSprite){
+    // add 20, which is approx half the width of the player sprite (so we can get the laser centered relative to the player)
+    Laser* newLaser = new Laser{p.x + (int)p.forward.x*2 + 20, p.y + (int)p.forward.y*2, 3, 10, p.forward, laserSprite};
+    p.lasers.insert(newLaser);
+}
+
+void moveLaser(Laser* las){
+    las->x += las->forward.x*3;
+    las->y += las->forward.y*3;
+}
+
+
 int main(int argc, char** argv){
     if(SDL_Init(SDL_INIT_VIDEO) != 0){
         logSDLError(std::cout,"SDL_Init Error: ");
@@ -374,7 +397,7 @@ int main(int argc, char** argv){
     /***
         set up background
     ***/
-    SDL_Texture *bg = loadTexture("background.bmp", renderer);
+    SDL_Texture* bg = loadTexture("background.bmp", renderer);
     if(bg == nullptr){
         SDL_DestroyWindow(window);
         SDL_DestroyRenderer(renderer);
@@ -385,17 +408,29 @@ int main(int argc, char** argv){
     // put the background on the screen
     renderTexture(bg, renderer, 0, 0, 0);
     
+    // load in laser sprite
+    SDL_Texture* laserSprite = loadTexture("laser.bmp", renderer);
+    if(laserSprite == nullptr){
+        SDL_DestroyWindow(window);
+        SDL_DestroyRenderer(renderer);
+        logSDLError(std::cout,"laser sprite load failed: ");
+        SDL_Quit();
+        return 1;
+    }
+    
     /***
         set up the player
     ***/
-    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, 0.f, {0.f, -1.f}, nullptr};
+    Player p1{SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0, 0, 0.f, {0.f, -1.f}, {}, nullptr};
     SDL_Texture* pTex = loadTexture("playerSprite.bmp", renderer);
     if(pTex == nullptr){
         return 1;
     }
     p1.sprite = pTex;
     
-    // add asteroid sprites
+    /***
+        set up asteroids
+    ***/
     Asteroid a1{50, 44, 20, false, {-1.5f, 1.6f}, nullptr};
     Asteroid a2{70, 80, 10, false, {1.8f, 1.8f}, nullptr};
     Asteroid a3{90, 280, 25, false, {-1.4f, -1.5f}, nullptr};
@@ -454,6 +489,8 @@ int main(int argc, char** argv){
                         case SDLK_RIGHT:
                             movePlayer(p1, RIGHT);
                             break;
+                        case SDLK_SPACE:
+                            fireLaser(p1, laserSprite);
                     }
                 break;
             }
@@ -490,12 +527,27 @@ int main(int argc, char** argv){
             renderTexture(ast->sprite, renderer, ast->x, ast->y, 0);
         }
         
+        // handle lasers
+        std::vector<Laser*> toRemove;
+        for(Laser* l : p1.lasers){
+            if(l->x > SCREEN_WIDTH + l->height || 
+               l->x < 0 - l->height ||
+               l->y > SCREEN_HEIGHT + l->height){
+                   toRemove.push_back(l);
+            }else{
+                moveLaser(l);
+                renderTexture(l->sprite, renderer, l->x, l->y, 0);
+            }
+        }
+        // remove lasers (use std::for_each and lambda?)
+        
         // update screen 
         SDL_RenderPresent(renderer);
     }
     
     //cleanup
     SDL_DestroyTexture(bg);
+    SDL_DestroyTexture(laserSprite);
     SDL_DestroyTexture(pTex);
     SDL_DestroyTexture(ast1);
     SDL_DestroyTexture(ast2);

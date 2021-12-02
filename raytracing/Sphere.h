@@ -10,7 +10,7 @@ class Sphere : public Hittable {
         double radius;
         
         Sphere(){}
-        Sphere(Point3 cen, double rad): center(cen), radius(rad) {};
+        Sphere(Point3 cen, double rad): center(cen), radius(rad) {}; // initialization list
         
         virtual bool hit(
             const Ray& ray,

@@ -127,6 +127,8 @@ int main(){
     if(file.is_open()){
         int counter = 0;
         
+        // I don't think there's really a good reason to use a smart pointer here 
+        // but just for practice I guess :)
         std::vector<std::unique_ptr<BingoBoard>> boardList;
         
         int currBoardIndex = -1;

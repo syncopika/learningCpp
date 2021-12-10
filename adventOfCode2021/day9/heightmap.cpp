@@ -57,7 +57,7 @@ int evalMinPoints(std::vector<std::vector<int>>& theMap){
     return minSum;
 }
 
-// part 2 - bfs
+// part 2 - dfs
 int findBasinTotal(std::vector<std::vector<int>>& theMap){
     std::priority_queue<int> maxHeap; // by default the priority queue is a max heap (largest nums at the top)
     

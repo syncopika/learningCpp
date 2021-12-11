@@ -1,15 +1,21 @@
 // g++ -Wall -std=c++14 syntax.cpp -o syntax
-
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
 #include <string>
 #include <stack>
+#include <vector>
 
 char getNext(std::stack<char>& stack){
     char next = stack.top();
     stack.pop();
     return next;
+}
+
+// for std::sort
+bool compare(long long a, long long b){
+    return a < b;
 }
 
 int main(){
@@ -24,6 +30,7 @@ int main(){
     };
     
     int totalPoints = 0;
+    std::vector<long long> results; // part 2
     
     if(file.is_open()){
         int lineCount = 1;
@@ -73,13 +80,41 @@ int main(){
             lineCount++;
             
             if(error) totalPoints += linePoints;
-            //if(!stack.empty() && !error) std::cout << "line " << lineCount << " is incomplete\n";
+            
+            // part 2
+            if(!stack.empty() && !error){
+                //std::cout << "line " << lineCount << " is incomplete\n";
+                std::string rem;
+                long long total = 0;
+                while(!stack.empty()){
+                    char next = getNext(stack);
+                    rem += next;
+                    
+                    if(next == '['){
+                        total = (total*5) + 2;
+                    }else if(next == '('){
+                        total = (total*5) + 1;
+                    }else if(next == '{'){
+                        total = (total*5) + 3;
+                    }else if(next == '<'){
+                        total = (total*5) + 4;
+                    }
+                }
+                results.push_back(total);
+                std::cout << "remaining on stack: " << rem << ", total: " << total << '\n';
+            }
         }
         
         file.close();
     }
     
     std::cout << "total points: " << totalPoints << '\n';
+    
+    // part 2
+    // needed long long again. whenever large negative numbers start showing up,
+    // it's a sign :)
+    std::sort(results.begin(), results.end(), compare);
+    std::cout << "part 2 total: " << results[(int)results.size()/2] << '\n';
     
     return 0;
 }

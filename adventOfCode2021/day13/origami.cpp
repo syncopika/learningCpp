@@ -41,11 +41,6 @@ void applyFold(std::string& fold, std::vector<std::vector<char>>& map){
     int coord = atoi(instruction[1].c_str());
     
     if(dir == "y"){
-        std::vector<char>& row = map[coord];
-        for(int i = 0; i < (int)row.size(); i++){
-            row[i] = '-';
-        }
-        
         for(int j = coord+1; j < (int)map.size(); j++){
             // find the row above the fold line to collapse with
             int rowToCollapseWith = (-1 * j) + (int)map.size() - 1; // if equal halves
@@ -61,16 +56,13 @@ void applyFold(std::string& fold, std::vector<std::vector<char>>& map){
                 if(curr == '#'){
                     map[rowToCollapseWith][k] = '#';
                 }
-                
-                // clear lines
-                map[j][k] = ' ';
             }
         }
-    }else if(dir == "x"){
-        for(int i = 0; i < (int)map.size(); i++){
-            map[i][coord] = '|';
-        }
         
+        // erase the folded rows
+        map.erase(map.begin() + coord, map.end());
+        
+    }else if(dir == "x"){
         for(int j = coord+1; j < (int)map[0].size(); j++){
             // find the row above the fold line to collapse with
             int colToCollapseWith = (-1 * j) + (int)map[0].size() - 1;
@@ -85,10 +77,12 @@ void applyFold(std::string& fold, std::vector<std::vector<char>>& map){
                 if(curr == '#'){
                     map[k][colToCollapseWith] = '#';
                 }
-                
-                // clear lines
-                map[k][j] = ' ';
             }
+        }
+        
+        // erase unneeded columns
+        for(std::vector<char>& row : map){
+            row.erase(row.begin()+coord, row.end());
         }
     }
 }

@@ -82,7 +82,7 @@ int main(){
         while(std::getline(file, line)){
             for(int i = 0; i < (int)line.length(); i++){
                 if(line[i] != ','){
-                    fish.push_back(line[i] - 48);
+                    fish.push_back(line[i] - 48); // subtract 48 to convert char to int
                     fish2[line[i] - 48]++;
                 }
             }

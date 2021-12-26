@@ -192,7 +192,7 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
     // if the load was successful, loadedImage won't be nullptr 
     if(loadedImage != nullptr){
         // color key the surface to make any 255,255,255 pixels transparent!
-         SDL_SetColorKey(loadedImage, SDL_TRUE, SDL_MapRGB(loadedImage->format, 0xFF, 0xFF, 0xFF ) );
+        SDL_SetColorKey(loadedImage, SDL_TRUE, SDL_MapRGB(loadedImage->format, 0xFF, 0xFF, 0xFF));
         
         // turn the surface to a texture 
         texture = SDL_CreateTextureFromSurface(ren, loadedImage);

@@ -41,8 +41,6 @@ previous tetrominos.
 #include <unordered_map>
 #include <vector>
 
-#define PI 3.14159265
-
 const int gridWidth = 10;
 const int gridHeight = 50;
 const int blockSize = 5; // 5px x 5px
@@ -50,7 +48,21 @@ const int blockSize = 5; // 5px x 5px
 const int SCREEN_WIDTH = gridWidth * blockSize;
 const int SCREEN_HEIGHT = gridHeight * blockSize;
 
-static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start; // for controlling the player's velocity
+static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start;
+
+void logSDLError(std::ostream &os, const std::string &msg){
+    os << msg << " error: " << SDL_GetError() << std::endl;
+}
+
+double getTimeElapsed(){
+    // https://stackoverflow.com/questions/31487876/getting-a-time-difference-in-milliseconds
+    // https://stackoverflow.com/questions/728068/how-to-calculate-a-time-difference-in-c
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration<double, std::milli>(now - start).count();
+}
+
+enum TetrominoType { STRAIGHT, SQUARE, T, L };
+enum BlockColor { GREEN, BLUE };
 
 struct Vec2 {
     float x;
@@ -63,10 +75,11 @@ struct GridCell {
 };
 
 struct Grid {
-    GridCell cells[gridHeight][120/blockSize];
-    
     // TODO: since the renderer's width is larger than what I asked for (DPI-related?),
     // query the renderer for the actual dimensions?
+    // also: maybe just use std::vector so we don't have to know dimensions ahead of time?
+    GridCell cells[gridHeight][120/blockSize];
+    
     void initGrid(){
         for(int i = 0; i < gridHeight; i++){
             for(int j = 0; j < (120/blockSize); j++){ // 120 is currently what is set for the width per the renderer
@@ -94,10 +107,17 @@ struct Grid {
 
 // TODO: use just one tetromino struct and come up with a way to
 // keep track of the different block configurations
-// square, T-, L-, skew
-struct StraightTetromino {
+// straight, square, T-, L-, skew
+// straight -> 4 blocks in a row; pos.x, pos.x+blockSize, pos.x+blockSize*2, ..., same pos.y for all
+// square -> (pos.x, pos.y), (pos.x+blockSize, pos.y), (pos.x, pos.y+blockSize), (pos.x+blockSize, pos.y+blockSize)
+// T -> (pos.x, pos.y), (pos.x+blockSize, pos.y), (pos.x+blockSize*2, pos.y), (pos.x+blockSize, pos.y+blockSize)
+// L -> (pos.x, pos.y), (pos.x, pos.y+blockSize), (pos.x, pos.y+blockSize*2), (pos.x+blockSize, pos.y+blockSize*2)
+// skew -> (pos.x, pos.y), (pos.x, pos.y+blockSize), (pos.x+blockSize, pos.y+blockSize), (pos.x+blockSize, pos.y+blockSize*2)
+// map of tetromino configurations to functions? :D
+struct Tetromino {
     Vec2 pos;
     int speed;
+    TetrominoType configuration;
     SDL_Texture* blockSprite;
     
     bool gridCheck(Grid& grid){
@@ -115,7 +135,7 @@ struct StraightTetromino {
             // can move
             for(int i = 0; i < 4; i++){
                 int gridX = currPosX / blockSize;
-                int gridY = (currPosY + (blockSize*speed)) / blockSize;
+                int gridY = (currPosY + blockSize) / blockSize;
                 canPlace = canPlace && !grid.cells[gridY][gridX].hasBlock;
                 currPosX += blockSize;
             }
@@ -139,20 +159,21 @@ struct StraightTetromino {
         }
     }
     
-    void reset(){
+    void reset(std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
         // this block has reached an end so start over and change the tetromino type
         pos.x = 20;
         pos.y = -blockSize*2;
+        blockSprite = blockMap[BlockColor(rand()%2)]; // only 2 colors right now
     }
     
     // maybe pass in the grid to check if this
     // tetromino should stop moving
-    void render(SDL_Renderer *ren, Grid& grid){
+    void render(SDL_Renderer *ren, Grid& grid, std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
         // this should be if this tetromino can't move further downwards
         if(gridCheck(grid) == false){
             //std::cout << "stop moving\n";
             markGrid(grid);
-            reset();
+            reset(blockMap);
             return;
         }
         
@@ -178,42 +199,6 @@ struct StraightTetromino {
         pos.y += speed;
     }
 };
-
-
-void logSDLError(std::ostream &os, const std::string &msg){
-    os << msg << " error: " << SDL_GetError() << std::endl;
-}
-
-double getTimeElapsed(){
-    // https://stackoverflow.com/questions/31487876/getting-a-time-difference-in-milliseconds
-    // https://stackoverflow.com/questions/728068/how-to-calculate-a-time-difference-in-c
-    auto now = std::chrono::steady_clock::now();
-    return std::chrono::duration<double, std::milli>(now - start).count();
-}
-
-/* linear ramp to max speed
-// it takes 2 seconds to reach max speed from 0
-// and also slows down to 0 in 2 seconds
-void linearRampToMaxSpeed(Player& p, double currentTimeElapsed){
-    // do some linear interpolation to figure out how fast the player should be right now
-    // we need to modify their velocity Vec2
-    // we can get the slope from the velocity (i.e. velocity.y / velocity.x)
-    // from there we get y = (velocity.y / velocity.x)*x and we can plug in current time for x.
-    // if currentTimeElapsed > 3 seconds, stay on max speed
-    if(currentTimeElapsed < 3000){
-        float sec = currentTimeElapsed / 1000;
-        float newSpeed = pow(1.6f, sec)*1.2f;
-        p.speed = newSpeed > 5 ? 5 : newSpeed;
-    }
-}
-
-void linearRampToMinSpeed(Player& p, double currentTimeElapsed){
-    if(currentTimeElapsed < 3000){
-        float sec = currentTimeElapsed / 1000;
-        float newSpeed = pow(0.25f, sec)*2;
-        p.speed = newSpeed < 0 ? 0 : newSpeed;
-    }
-}*/
 
 SDL_Texture* loadTexture(const std::string& file, SDL_Renderer *ren){
     // initialize texture to null first 
@@ -293,9 +278,7 @@ int main(int argc, char** argv){
     srand(time(nullptr));
     
     /***
-        
         set up background
-        
     ***/
     SDL_Texture* bg = loadTexture("background.bmp", renderer);
     if(bg == nullptr){
@@ -309,13 +292,12 @@ int main(int argc, char** argv){
     renderTexture(bg, renderer, 0, 0, 0);
     
     /***
-        
         load in block sprites
-        
     ***/
-    std::unordered_map<std::string, SDL_Texture*> blockMap;
+    std::unordered_map<BlockColor, SDL_Texture*> blockMap;
     SDL_Texture* blueBlockSprite = loadTexture("blueBlock.bmp", renderer);
     SDL_Texture* greenBlockSprite = loadTexture("greenBlock.bmp", renderer);
+    
     if(blueBlockSprite == nullptr || greenBlockSprite == nullptr){
         SDL_DestroyWindow(window);
         SDL_DestroyRenderer(renderer);
@@ -323,24 +305,21 @@ int main(int argc, char** argv){
         SDL_Quit();
         return 1;
     }
-    blockMap["blue"] = blueBlockSprite;
-    blockMap["green"] = greenBlockSprite;
+    
+    blockMap[BlockColor::BLUE] = blueBlockSprite;
+    blockMap[BlockColor::GREEN] = greenBlockSprite;
     
     /***        
-        
         BEGIN EVENT LOOP
-        
     ***/
     bool quit = false; 
     SDL_Event event;
     
     Vec2 pos{10, -2};
-    StraightTetromino tetro{pos, 1, blueBlockSprite};
+    Tetromino currTetro{pos, 1, TetrominoType::STRAIGHT, blueBlockSprite};
     
     Grid grid;
     grid.initGrid();
-    
-    StraightTetromino& currBlock = tetro;
     
     while(!quit){
         SDL_RenderClear(renderer); // clear the frame
@@ -353,7 +332,7 @@ int main(int argc, char** argv){
                     quit = true;
                     break;
                 
-                /* pressing q or Esc on keyboard and handles movement for player */
+                // pressing q or Esc on keyboard and handles movement for player
                 // we're avoiding SDL_GetKeyboardState because that registers multiples events for a single button press
                 // which we don't want in this case
                 case SDL_KEYDOWN:
@@ -363,8 +342,8 @@ int main(int argc, char** argv){
                             quit = true;
                             break;
                         case SDLK_LEFT:
-                            if(currBlock.pos.x - blockSize >= 0){
-                                currBlock.pos.x -= blockSize;
+                            if(currTetro.pos.x - blockSize >= 0){
+                                currTetro.pos.x -= blockSize;
                             }
                             break;
                         case SDLK_RIGHT:
@@ -374,8 +353,8 @@ int main(int argc, char** argv){
                             SDL_GetRendererOutputSize(renderer, &screenWidth, &screenHeight);
                             
                             // currently this is specific to a straight tetromino FYI
-                            if(currBlock.pos.x + blockSize < screenWidth - (blockSize*4)){
-                                currBlock.pos.x += blockSize;
+                            if(currTetro.pos.x + blockSize < screenWidth - (blockSize*4)){
+                                currTetro.pos.x += blockSize;
                             }
                             break;
                     }
@@ -387,7 +366,7 @@ int main(int argc, char** argv){
         renderTexture(bg, renderer, 0, 0, 0);
         
         // update player's current tetromino position
-        currBlock.render(renderer, grid);
+        currTetro.render(renderer, grid, blockMap);
         
         // render all the blocks currently in place on the grid
         grid.render(renderer);
@@ -396,7 +375,7 @@ int main(int argc, char** argv){
         SDL_RenderPresent(renderer);
     }
     
-    //cleanup
+    // cleanup
     SDL_DestroyTexture(bg);
     SDL_DestroyTexture(blueBlockSprite);
     SDL_DestroyTexture(greenBlockSprite);

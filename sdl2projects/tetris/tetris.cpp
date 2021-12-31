@@ -1,3 +1,34 @@
+/*
+
+design idea:
+
+we take a single struct that represents a tetromino.
+it will have a position and an SDL_Texture representing the block that
+makes up the tetromino.
+
+we also have a grid struct to represent where all the tetrominos that
+have reached their final position should be.
+
+for each frame, we move the single tetromino towards the bottom of the screen, as well as
+check to see if the current tetromino configuration needs to stop moving by comparing against
+the grid struct, which tells us which cells in the grid are blocked.
+
+for drawing the tetromino we take the SDL_Texture and, based on the configuration (e.g. straight, T-shaped, etc.),
+we draw 4 blocks with that texture.
+
+when the tetromino reaches a stopping point, we take its position, figure out where in the grid struct its 4 blocks are,
+and then mark on the grid that those positions are now blocked. we also assign those cells the SDL_Texture of the blocks.
+
+we also re-render the grid each frame so that we can see the previous tetrominos this way.
+
+then the single tetromino struct gets reset; it should randomly get reassigned a new configuration and block texture. 
+its position also gets reset to a position slightly above the screen. in this way we only need to keep track of a single
+tetromino at any time and whenever it reaches a stopping point we record it in the grid and the grid renders all the
+previous tetrominos.
+
+
+*/
+
 #include <SDL2/SDL.h>
 #include <math.h>
 #include <algorithm>
@@ -21,8 +52,6 @@ const int SCREEN_HEIGHT = gridHeight * blockSize;
 
 static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start; // for controlling the player's velocity
 
-enum Direction { LEFT, RIGHT, UP, DOWN, NONE };
-
 struct Vec2 {
     float x;
     float y;
@@ -34,11 +63,13 @@ struct GridCell {
 };
 
 struct Grid {
-    GridCell cells[gridHeight][gridWidth];
+    GridCell cells[gridHeight][120/blockSize];
     
+    // TODO: since the renderer's width is larger than what I asked for (DPI-related?),
+    // query the renderer for the actual dimensions?
     void initGrid(){
         for(int i = 0; i < gridHeight; i++){
-            for(int j = 0; j < gridWidth; j++){
+            for(int j = 0; j < (120/blockSize); j++){ // 120 is currently what is set for the width per the renderer
                 cells[i][j] = GridCell{false, nullptr};
             }
         }
@@ -46,7 +77,7 @@ struct Grid {
     
     void render(SDL_Renderer *ren){
         for(int i = 0; i < gridHeight; i++){
-            for(int j = 0; j < gridWidth; j++){
+            for(int j = 0; j < (120/blockSize); j++){
                 GridCell& c = cells[i][j];
                 if(c.hasBlock != false){
                     SDL_Texture* blockSprite = c.sprite;
@@ -61,6 +92,9 @@ struct Grid {
     }
 };
 
+// TODO: use just one tetromino struct and come up with a way to
+// keep track of the different block configurations
+// square, T-, L-, skew
 struct StraightTetromino {
     Vec2 pos;
     int speed;
@@ -71,21 +105,17 @@ struct StraightTetromino {
         // and current rotation
         bool canPlace = true;
         int currPosX = pos.x; // used for placing each block of the tetromino
+        int currPosY = pos.y;
         
-        if(pos.y == SCREEN_HEIGHT - blockSize){
-            // see if all 4 blocks in a row can be placed at the bottom
-            for(int i = 0; i < 4; i++){
-                int gridX = currPosX / blockSize;
-                int gridY = (SCREEN_HEIGHT - blockSize) / blockSize;
-                canPlace = canPlace && !grid.cells[gridY][gridX].hasBlock;
-                currPosX += blockSize;
-            }
-            return canPlace;
+        if(currPosY >= SCREEN_HEIGHT - blockSize){
+            pos.y = SCREEN_HEIGHT - blockSize;
+            //std::cout << "reached bottom\n";
+            return false;
         }else{
             // can move
             for(int i = 0; i < 4; i++){
                 int gridX = currPosX / blockSize;
-                int gridY = (pos.y + blockSize + speed) / blockSize;
+                int gridY = (currPosY + (blockSize*speed)) / blockSize;
                 canPlace = canPlace && !grid.cells[gridY][gridX].hasBlock;
                 currPosX += blockSize;
             }
@@ -96,6 +126,7 @@ struct StraightTetromino {
     // when the tetromino can't move anymore,
     // mark its position on the grid
     void markGrid(Grid& grid){
+        //std::cout << "marking grid\n";
         int currPosX = pos.x;
         int currPosY = pos.y;
         for(int i = 0; i < 4; i++){
@@ -108,12 +139,20 @@ struct StraightTetromino {
         }
     }
     
+    void reset(){
+        // this block has reached an end so start over and change the tetromino type
+        pos.x = 20;
+        pos.y = -blockSize*2;
+    }
+    
     // maybe pass in the grid to check if this
     // tetromino should stop moving
     void render(SDL_Renderer *ren, Grid& grid){
         // this should be if this tetromino can't move further downwards
-        if(!gridCheck(grid)){
+        if(gridCheck(grid) == false){
+            //std::cout << "stop moving\n";
             markGrid(grid);
+            reset();
             return;
         }
         
@@ -140,64 +179,9 @@ struct StraightTetromino {
     }
 };
 
-struct SquareTetromino {
-    Vec2 pos;
-    int speed;
-    SDL_Texture* blockSprite;
-    void render(){
-        // display 4 blocks in a square formation based on pos
-    }
-};
-
-struct TTetromino {
-    Vec2 pos;
-    int speed;
-    SDL_Texture* blockSprite;
-    void render(){
-        // display 4 blocks in a T formation based on pos
-    }
-};
-
-struct LTetromino {
-    Vec2 pos;
-    int speed;
-    SDL_Texture* blockSprite;
-    void render(){
-        // display 4 blocks in a L formation based on pos
-    }
-};
-
-struct SkewTetromino {
-    Vec2 pos;
-    int speed;
-    SDL_Texture* blockSprite;
-    void render(){
-        // display 4 blocks in a skewed formation based on pos
-    }
-};
-
-struct Player {
-    int x;
-    int y;
-    int score;
-    Vec2 forward; // down or left or right
-};
 
 void logSDLError(std::ostream &os, const std::string &msg){
     os << msg << " error: " << SDL_GetError() << std::endl;
-}
-
-Direction determineMovement(const Uint8* state){
-    if(state[SDL_SCANCODE_LEFT]){
-        return LEFT;
-    }else if(state[SDL_SCANCODE_RIGHT]){
-        return RIGHT;
-    }else if(state[SDL_SCANCODE_UP]){
-        return UP;
-    }else if(state[SDL_SCANCODE_DOWN]){
-        return DOWN;
-    }
-    return NONE;
 }
 
 double getTimeElapsed(){
@@ -230,82 +214,6 @@ void linearRampToMinSpeed(Player& p, double currentTimeElapsed){
         p.speed = newSpeed < 0 ? 0 : newSpeed;
     }
 }*/
-
-/*
-void movePlayer(Player& p, Direction dir){
-    if(dir != NONE){
-        if(dir == DOWN){
-            if(!isMoving){
-                isMoving = true;
-                start = std::chrono::time_point_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now()
-                );
-            }
-        }else if(dir == LEFT){
-            // rotate left
-            float newAngle = -(PI/4); // 45 deg
-            float cosAngle = cos(newAngle);
-            float sinAngle = sin(newAngle);
-            
-            // rotating the forward vector
-            float newForwardX = cosAngle*p.forward.x - sinAngle*p.forward.y;
-            float newForwardY = sinAngle*p.forward.x + cosAngle*p.forward.y;
-            
-            p.forward.x = newForwardX;
-            p.forward.y = newForwardY;
-        }else if(dir == RIGHT){
-            // rotate right
-            float newAngle = (PI/4); // 45 deg
-            float cosAngle = cos(newAngle);
-            float sinAngle = sin(newAngle);
-            
-            float newForwardX = cosAngle*p.forward.x - sinAngle*p.forward.y;
-            float newForwardY = sinAngle*p.forward.x + cosAngle*p.forward.y;
-            
-            p.forward.x = newForwardX;
-            p.forward.y = newForwardY;
-        }
-        
-        if(isMoving){
-            // increase speed gradually to some maximum
-            double elapsedTime = getTimeElapsed();
-            linearRampToMaxSpeed(p, elapsedTime);
-            
-            // find the new x and y components of the current velocity
-            float forwardMagnitude = sqrt(p.forward.x*p.forward.x + p.forward.y*p.forward.y) * p.speed;
-            int newX = p.x + forwardMagnitude;
-            int newY = p.y + forwardMagnitude;
-            
-            p.x = newX;
-            p.y = newY;
-        }
-    }else{
-        // player is at rest
-        if(isMoving){
-            isMoving = false;
-            start = std::chrono::time_point_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now()
-            );
-        }
-        if(!isMoving && p.speed > 0.0){
-            double elapsedTime = getTimeElapsed();
-            linearRampToMinSpeed(p, elapsedTime);
-            
-            // find the new x and y components of the current velocity
-            float forwardMagnitude = sqrt(p.forward.x*p.forward.x + p.forward.y*p.forward.y) * p.speed;
-            double angle = atan2(p.forward.y, p.forward.x);
-            double xComponent = cos(angle)*forwardMagnitude;
-            double yComponent = sin(angle)*forwardMagnitude;
-            
-            int newX = p.x + int(xComponent);
-            int newY = p.y + int(yComponent);
-            
-            p.x = newX;
-            p.y = newY;
-        }
-    }
-}
-*/
 
 SDL_Texture* loadTexture(const std::string& file, SDL_Renderer *ren){
     // initialize texture to null first 
@@ -350,22 +258,6 @@ void renderTexture(SDL_Texture* tex, SDL_Renderer* ren, int x, int y, double rot
     SDL_RenderCopyEx(ren, tex, nullptr, &dst, rotation, nullptr, SDL_FLIP_NONE);
 }
 
-/*
-template <class T, class S>
-bool hasCollision(T* a, S* b){
-    int width = 50; // TODO: don't hard code these values? should be taken from bmp image data
-    int height = 50;
-    bool withinX = a->x <= (b->x + width) && (a->x + width) >= b->x;
-    bool withinY = a->y <= (b->y + height) && (b->y + height) <= (a->y + height);
-    return withinX && withinY;
-}
-
-
-void handleCollisions(Tetromino& block, std::set<Tetromino*>& otherBlocks){
-    //
-}
-*/
-
 int main(int argc, char** argv){
     if(SDL_Init(SDL_INIT_VIDEO) != 0){
         logSDLError(std::cout,"SDL_Init Error: ");
@@ -380,6 +272,11 @@ int main(int argc, char** argv){
         return 1;
     }
     
+    int ww;
+    int wh;
+    SDL_GetWindowSize(window, &ww, &wh);
+    std::cout << "window width in pixels: " << ww << ", window height in pixels: " << wh << '\n'; 
+    
     // create the renderer to render the window with 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if(renderer == nullptr){
@@ -388,6 +285,9 @@ int main(int argc, char** argv){
         SDL_Quit();
         return 1;
     }
+    
+    std::cout << "renderer width in pixels: " << ww << ", window height in pixels: " << wh << '\n'; 
+    SDL_GetRendererOutputSize(renderer, &ww, &wh);
     
     // initialize random seed
     srand(time(nullptr));
@@ -433,7 +333,6 @@ int main(int argc, char** argv){
     ***/
     bool quit = false; 
     SDL_Event event;
-    const Uint8 *keystate;
     
     Vec2 pos{10, -2};
     StraightTetromino tetro{pos, 1, blueBlockSprite};
@@ -441,10 +340,10 @@ int main(int argc, char** argv){
     Grid grid;
     grid.initGrid();
     
+    StraightTetromino& currBlock = tetro;
+    
     while(!quit){
         SDL_RenderClear(renderer); // clear the frame
-        
-        StraightTetromino& currBlock = tetro;
         
         // check for actions that will quit the program 
         if(SDL_PollEvent(&event)){
@@ -469,7 +368,13 @@ int main(int argc, char** argv){
                             }
                             break;
                         case SDLK_RIGHT:
-                            if(currBlock.pos.x + blockSize <= SCREEN_WIDTH - blockSize){
+                            // TODO: since the renderer's width is larger than what I asked for,
+                            // query the renderer for the actual dimensions?
+                            int screenWidth, screenHeight;
+                            SDL_GetRendererOutputSize(renderer, &screenWidth, &screenHeight);
+                            
+                            // currently this is specific to a straight tetromino FYI
+                            if(currBlock.pos.x + blockSize < screenWidth - (blockSize*4)){
                                 currBlock.pos.x += blockSize;
                             }
                             break;
@@ -480,15 +385,6 @@ int main(int argc, char** argv){
         
         // redraw the background
         renderTexture(bg, renderer, 0, 0, 0);
-        
-        // then handle sprite movement
-        keystate = SDL_GetKeyboardState(NULL);
-        
-        // redraw the sprites
-        Direction dir = determineMovement(keystate);
-        if(dir == DOWN){
-            // TODO
-        }
         
         // update player's current tetromino position
         currBlock.render(renderer, grid);

@@ -1,0 +1,2 @@
+// SDL renderer has a larger width than what I specified :/. related to DPI maybe?
+https://stackoverflow.com/questions/59829969/why-is-my-vs-sdl-2-0-window-2x-bigger-than-i-specified

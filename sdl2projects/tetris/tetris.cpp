@@ -26,6 +26,9 @@ its position also gets reset to a position slightly above the screen. in this wa
 tetromino at any time and whenever it reaches a stopping point we record it in the grid and the grid renders all the
 previous tetrominos.
 
+TODO:
+    - implement rotations (absolutely necessary to get a full row)
+    - implement different tetromino configurations
 
 */
 
@@ -41,11 +44,12 @@ previous tetrominos.
 #include <unordered_map>
 #include <vector>
 
-const int gridWidth = 10;
+const int gridWidth = 12;
 const int gridHeight = 50;
 const int blockSize = 5; // 5px x 5px
+const int rowWidth = (120/blockSize); // use this for now until we figure out the width weirdness.
 
-const int SCREEN_WIDTH = gridWidth * blockSize;
+const int SCREEN_WIDTH = gridWidth * blockSize; // TODO: figure out why I can't seem to get the actual screen width smaller than 120 :/
 const int SCREEN_HEIGHT = gridHeight * blockSize;
 
 static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start;
@@ -61,7 +65,7 @@ double getTimeElapsed(){
     return std::chrono::duration<double, std::milli>(now - start).count();
 }
 
-enum TetrominoType { STRAIGHT, SQUARE, T, L };
+enum TetrominoType { STRAIGHT, SQUARE, SKEW, T, L };
 enum BlockColor { GREEN, BLUE };
 
 struct Vec2 {
@@ -78,19 +82,56 @@ struct Grid {
     // TODO: since the renderer's width is larger than what I asked for (DPI-related?),
     // query the renderer for the actual dimensions?
     // also: maybe just use std::vector so we don't have to know dimensions ahead of time?
-    GridCell cells[gridHeight][120/blockSize];
+    GridCell cells[gridHeight][rowWidth];
     
     void initGrid(){
         for(int i = 0; i < gridHeight; i++){
-            for(int j = 0; j < (120/blockSize); j++){ // 120 is currently what is set for the width per the renderer
+            for(int j = 0; j < rowWidth; j++){ // 120 is currently what is set for the width per the renderer
                 cells[i][j] = GridCell{false, nullptr};
+            }
+        }
+    }
+    
+    // possibly bad for performance but just for now,
+    // iterate through the grid to see if we have any full rows
+    // if so, remove them and move previous rows
+    void checkFullRows(){
+        // step 1: find the full rows (store index of each full row)
+        std::vector<int> fullRows;
+        
+        for(int i = 1; i < gridHeight; i++){
+            bool isFullRow = true;
+            for(int j = 0; j < rowWidth; j++){
+                isFullRow = isFullRow && cells[i][j].hasBlock;
+            }
+            if(isFullRow) fullRows.push_back(i);
+        }
+        
+        // step 2: remove and move prev rows up
+        // get the rows we need to cancel via fullRows.back() - fullRows[0]
+        // everything from row 0 to fullRows[0] should be moved up
+        if(fullRows.size() > 0){
+            for(int i = fullRows[0]; i <= fullRows.back(); i++){
+                for(int j = 0; j < rowWidth; j++){
+                    // TODO
+                    cells[i][j].hasBlock = false;
+                    cells[i][j].sprite = nullptr;
+                }
+            }
+            
+            // only need to move prev row up if curr row is > 0
+            for(int i = fullRows[0]-1; i >= 0; i--){
+                // TODO
+                // kinda tricky? need to take the row behind fullRows[0]
+                // and move it to fullRows.back()
+                // so some extra addition needed to find the right row index
             }
         }
     }
     
     void render(SDL_Renderer *ren){
         for(int i = 0; i < gridHeight; i++){
-            for(int j = 0; j < (120/blockSize); j++){
+            for(int j = 0; j < rowWidth; j++){
                 GridCell& c = cells[i][j];
                 if(c.hasBlock != false){
                     SDL_Texture* blockSprite = c.sprite;
@@ -162,10 +203,11 @@ struct Tetromino {
     void reset(std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
         // this block has reached an end so start over and change the tetromino type
         pos.x = 20;
-        pos.y = -blockSize*2;
+        pos.y = -blockSize * 2;
         blockSprite = blockMap[BlockColor(rand()%2)]; // only 2 colors right now
     }
     
+    // maybe pass in the grid to check if this
     // maybe pass in the grid to check if this
     // tetromino should stop moving
     void render(SDL_Renderer *ren, Grid& grid, std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
@@ -250,6 +292,7 @@ int main(int argc, char** argv){
     }
     
     // create a window 
+    std::cout << "SCREEN_WIDTH: " << SCREEN_WIDTH << '\n';
     SDL_Window *window = SDL_CreateWindow("tetris", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if(window == nullptr){
         logSDLError(std::cout, "SDL_CreateWindow Error: ");

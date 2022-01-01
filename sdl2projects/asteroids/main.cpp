@@ -559,7 +559,7 @@ int main(int argc, char** argv){
                    toRemove.push_back(l);
             }else{
                 moveLaser(l);
-                renderTexture(l->sprite, renderer, l->x, l->y, currAngle);
+                renderTexture(l->sprite, renderer, l->x, l->y, currAngle); // this currAngle is being used for the player as well! :/
             }
         }
         // remove lasers (use std::for_each and lambda?)

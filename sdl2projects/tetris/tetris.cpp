@@ -44,6 +44,7 @@ TODO:
 #include <unordered_map>
 #include <vector>
 
+// TODO: make these #define ?
 const int gridWidth = 12;
 const int gridHeight = 50;
 const int blockSize = 5; // 5px x 5px
@@ -66,6 +67,7 @@ double getTimeElapsed(){
 }
 
 enum TetrominoType { STRAIGHT, SQUARE, SKEW, T, L };
+enum Orientation { LEFT, UP, RIGHT, DOWN };
 enum BlockColor { GREEN, BLUE };
 
 struct Vec2 {
@@ -148,17 +150,19 @@ struct Grid {
 
 // TODO: use just one tetromino struct and come up with a way to
 // keep track of the different block configurations
-// straight, square, T-, L-, skew
 // straight -> 4 blocks in a row; pos.x, pos.x+blockSize, pos.x+blockSize*2, ..., same pos.y for all
 // square -> (pos.x, pos.y), (pos.x+blockSize, pos.y), (pos.x, pos.y+blockSize), (pos.x+blockSize, pos.y+blockSize)
 // T -> (pos.x, pos.y), (pos.x+blockSize, pos.y), (pos.x+blockSize*2, pos.y), (pos.x+blockSize, pos.y+blockSize)
 // L -> (pos.x, pos.y), (pos.x, pos.y+blockSize), (pos.x, pos.y+blockSize*2), (pos.x+blockSize, pos.y+blockSize*2)
 // skew -> (pos.x, pos.y), (pos.x, pos.y+blockSize), (pos.x+blockSize, pos.y+blockSize), (pos.x+blockSize, pos.y+blockSize*2)
-// map of tetromino configurations to functions? :D
+// map of tetromino configurations to functions? :D function pointers
+//std::unordered_map<TetrominoType, std::vector<std::vector<int>>> rotations;
+
 struct Tetromino {
     Vec2 pos;
     int speed;
     TetrominoType configuration;
+    Orientation orientation;
     SDL_Texture* blockSprite;
     
     bool gridCheck(Grid& grid){
@@ -168,19 +172,32 @@ struct Tetromino {
         int currPosX = pos.x; // used for placing each block of the tetromino
         int currPosY = pos.y;
         
-        if(currPosY >= SCREEN_HEIGHT - blockSize){
-            pos.y = SCREEN_HEIGHT - blockSize;
-            //std::cout << "reached bottom\n";
-            return false;
+        if(configuration == TetrominoType::STRAIGHT && 
+            orientation == Orientation::LEFT && 
+            currPosY >= SCREEN_HEIGHT - blockSize){
+                pos.y = SCREEN_HEIGHT - blockSize;
+                //std::cout << "reached bottom\n";
+                return false;
+        }else if(
+            configuration == TetrominoType::STRAIGHT &&
+            orientation == Orientation::UP && 
+            currPosY >= SCREEN_HEIGHT - blockSize*4){
+                pos.y = SCREEN_HEIGHT - blockSize*4;
+                return false;
         }else{
             // can move
             for(int i = 0; i < 4; i++){
                 int gridX = currPosX / blockSize;
                 int gridY = (currPosY + blockSize) / blockSize;
                 canPlace = canPlace && !grid.cells[gridY][gridX].hasBlock;
-                currPosX += blockSize;
+                
+                if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::LEFT)
+                    currPosX += blockSize;
+                
+                if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::UP)
+                    currPosY += blockSize;
             }
-            return canPlace;            
+            return canPlace;
         }
     }
     
@@ -196,18 +213,23 @@ struct Tetromino {
             GridCell& c = grid.cells[gridY][gridX];
             c.hasBlock = true;
             c.sprite = blockSprite;
-            currPosX += blockSize;
+            
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::LEFT)
+                currPosX += blockSize;
+            
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::UP)
+                currPosY += blockSize;
         }
     }
     
     void reset(std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
         // this block has reached an end so start over and change the tetromino type
+        // TODO: assign random configuration, orientation
         pos.x = 20;
         pos.y = -blockSize * 2;
         blockSprite = blockMap[BlockColor(rand()%2)]; // only 2 colors right now
     }
     
-    // maybe pass in the grid to check if this
     // maybe pass in the grid to check if this
     // tetromino should stop moving
     void render(SDL_Renderer *ren, Grid& grid, std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
@@ -234,8 +256,11 @@ struct Tetromino {
             SDL_QueryTexture(blockSprite, nullptr, nullptr, &dst.w, &dst.h); 
             SDL_RenderCopyEx(ren, blockSprite, nullptr, &dst, 0, nullptr, SDL_FLIP_NONE);
             
-            // assuming the blocks are laid out horizontally for now
-            currPosX += blockSize; // blockSize is global. fix that? or rename so it's a bit more clearer it's global
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::LEFT)
+                currPosX += blockSize;
+            
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::UP)
+                currPosY += blockSize;
         }
         
         pos.y += speed;
@@ -283,6 +308,16 @@ void renderTexture(SDL_Texture* tex, SDL_Renderer* ren, int x, int y, double rot
     SDL_QueryTexture(tex, nullptr, nullptr, &dst.w, &dst.h);
     
     SDL_RenderCopyEx(ren, tex, nullptr, &dst, rotation, nullptr, SDL_FLIP_NONE);
+}
+
+void updateOrientation(Tetromino& currTetro){
+    if(currTetro.configuration == TetrominoType::STRAIGHT){
+        if(currTetro.orientation == Orientation::LEFT){
+            currTetro.orientation = Orientation::UP;
+        }else{
+            currTetro.orientation = Orientation::LEFT;
+        }
+    }
 }
 
 int main(int argc, char** argv){
@@ -359,7 +394,7 @@ int main(int argc, char** argv){
     SDL_Event event;
     
     Vec2 pos{10, -2};
-    Tetromino currTetro{pos, 1, TetrominoType::STRAIGHT, blueBlockSprite};
+    Tetromino currTetro{pos, 1, TetrominoType::STRAIGHT, Orientation::LEFT, blueBlockSprite};
     
     Grid grid;
     grid.initGrid();
@@ -384,6 +419,10 @@ int main(int argc, char** argv){
                         case SDLK_q:
                             quit = true;
                             break;
+                        case SDLK_r:
+                            // rotate the current tetromino
+                            updateOrientation(currTetro);
+                            break;
                         case SDLK_LEFT:
                             if(currTetro.pos.x - blockSize >= 0){
                                 currTetro.pos.x -= blockSize;
@@ -395,9 +434,15 @@ int main(int argc, char** argv){
                             int screenWidth, screenHeight;
                             SDL_GetRendererOutputSize(renderer, &screenWidth, &screenHeight);
                             
-                            // currently this is specific to a straight tetromino FYI
-                            if(currTetro.pos.x + blockSize < screenWidth - (blockSize*4)){
-                                currTetro.pos.x += blockSize;
+                            if(currTetro.configuration == TetrominoType::STRAIGHT &&
+                                currTetro.orientation == Orientation::LEFT &&
+                                currTetro.pos.x + blockSize < screenWidth - (blockSize*4)){
+                                    currTetro.pos.x += blockSize;
+                            }else if(
+                                currTetro.configuration == TetrominoType::STRAIGHT &&
+                                currTetro.orientation == Orientation::UP &&
+                                currTetro.pos.x + blockSize < screenWidth - blockSize){
+                                    currTetro.pos.x += blockSize;
                             }
                             break;
                     }

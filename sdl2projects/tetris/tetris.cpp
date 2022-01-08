@@ -106,16 +106,15 @@ struct Grid {
             for(int j = 0; j < rowWidth; j++){
                 isFullRow = isFullRow && cells[i][j].hasBlock;
             }
-            if(isFullRow) fullRows.push_back(i);
+            if(isFullRow) fullRows.push_back(i); // record the index of the full row
         }
         
         // step 2: remove and move prev rows up
-        // get the rows we need to cancel via fullRows.back() - fullRows[0]
-        // everything from row 0 to fullRows[0] should be moved up
-        if(fullRows.size() > 0){
+        int numFullRows = (int)fullRows.size();
+        //std::cout << "num full rows: " << numFullRows << '\n';
+        if(numFullRows > 0){
             for(int i = fullRows[0]; i <= fullRows.back(); i++){
                 for(int j = 0; j < rowWidth; j++){
-                    // TODO
                     cells[i][j].hasBlock = false;
                     cells[i][j].sprite = nullptr;
                 }
@@ -123,10 +122,16 @@ struct Grid {
             
             // only need to move prev row up if curr row is > 0
             for(int i = fullRows[0]-1; i >= 0; i--){
-                // TODO
-                // kinda tricky? need to take the row behind fullRows[0]
-                // and move it to fullRows.back()
-                // so some extra addition needed to find the right row index
+                int newRowIndex = i + numFullRows;
+                for(int j = 0; j < rowWidth; j++){
+                    // move everything down
+                    cells[newRowIndex][j].hasBlock = cells[i][j].hasBlock;
+                    cells[newRowIndex][j].sprite = cells[i][j].sprite;
+                    
+                    // then reset
+                    cells[i][j].hasBlock = false;
+                    cells[i][j].sprite = nullptr;
+                }
             }
         }
     }
@@ -234,9 +239,11 @@ struct Tetromino {
     // tetromino should stop moving
     void render(SDL_Renderer *ren, Grid& grid, std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
         // this should be if this tetromino can't move further downwards
+        // TODO: should this really be here? kinda funny it belongs to Tetromino?
         if(gridCheck(grid) == false){
             //std::cout << "stop moving\n";
             markGrid(grid);
+            grid.checkFullRows(); // remove any full rows and move prev rows down
             reset(blockMap);
             return;
         }
@@ -421,6 +428,7 @@ int main(int argc, char** argv){
                             break;
                         case SDLK_r:
                             // rotate the current tetromino
+                            // TODO: bug - if orientation is up and at the edge, rotation should not be possible
                             updateOrientation(currTetro);
                             break;
                         case SDLK_LEFT:
@@ -436,12 +444,12 @@ int main(int argc, char** argv){
                             
                             if(currTetro.configuration == TetrominoType::STRAIGHT &&
                                 currTetro.orientation == Orientation::LEFT &&
-                                currTetro.pos.x + blockSize < screenWidth - (blockSize*4)){
+                                currTetro.pos.x + blockSize <= screenWidth - (blockSize*4)){
                                     currTetro.pos.x += blockSize;
                             }else if(
                                 currTetro.configuration == TetrominoType::STRAIGHT &&
                                 currTetro.orientation == Orientation::UP &&
-                                currTetro.pos.x + blockSize < screenWidth - blockSize){
+                                currTetro.pos.x + blockSize <= screenWidth - blockSize){
                                     currTetro.pos.x += blockSize;
                             }
                             break;

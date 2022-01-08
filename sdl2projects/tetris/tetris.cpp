@@ -29,6 +29,10 @@ previous tetrominos.
 TODO:
     - implement rotations (absolutely necessary to get a full row)
     - implement different tetromino configurations
+    - BUG: tetrominos can collide with already placed ones -> I think the check for hasBlock is mostly working
+           when moving right (still might not be correct), and currently not implemented for moving left
+    - figure out what happens when there's no more room to move
+      e.g. first row is blocking
 
 */
 
@@ -46,7 +50,7 @@ TODO:
 
 // TODO: make these #define ?
 const int gridWidth = 12;
-const int gridHeight = 50;
+const int gridHeight = 30; //50
 const int blockSize = 5; // 5px x 5px
 const int rowWidth = (120/blockSize); // use this for now until we figure out the width weirdness.
 
@@ -68,7 +72,7 @@ double getTimeElapsed(){
 
 enum TetrominoType { STRAIGHT, SQUARE, SKEW, T, L };
 enum Orientation { LEFT, UP, RIGHT, DOWN };
-enum BlockColor { GREEN, BLUE };
+enum BlockColor { GREEN, BLUE, RED };
 
 struct Vec2 {
     float x;
@@ -171,10 +175,8 @@ struct Tetromino {
     SDL_Texture* blockSprite;
     
     bool gridCheck(Grid& grid){
-        // need to factor in the direction of movement eventually
-        // and current rotation
         bool canPlace = true;
-        int currPosX = pos.x; // used for placing each block of the tetromino
+        int currPosX = pos.x;
         int currPosY = pos.y;
         
         if(configuration == TetrominoType::STRAIGHT && 
@@ -232,7 +234,7 @@ struct Tetromino {
         // TODO: assign random configuration, orientation
         pos.x = 20;
         pos.y = -blockSize * 2;
-        blockSprite = blockMap[BlockColor(rand()%2)]; // only 2 colors right now
+        blockSprite = blockMap[BlockColor(rand()%3)]; // only 3 colors right now
     }
     
     // maybe pass in the grid to check if this
@@ -382,8 +384,9 @@ int main(int argc, char** argv){
     std::unordered_map<BlockColor, SDL_Texture*> blockMap;
     SDL_Texture* blueBlockSprite = loadTexture("blueBlock.bmp", renderer);
     SDL_Texture* greenBlockSprite = loadTexture("greenBlock.bmp", renderer);
+    SDL_Texture* redBlockSprite = loadTexture("redBlock.bmp", renderer);
     
-    if(blueBlockSprite == nullptr || greenBlockSprite == nullptr){
+    if(blueBlockSprite == nullptr || greenBlockSprite == nullptr || redBlockSprite == nullptr){
         SDL_DestroyWindow(window);
         SDL_DestroyRenderer(renderer);
         logSDLError(std::cout,"block sprite creation failed: ");
@@ -393,6 +396,7 @@ int main(int argc, char** argv){
     
     blockMap[BlockColor::BLUE] = blueBlockSprite;
     blockMap[BlockColor::GREEN] = greenBlockSprite;
+    blockMap[BlockColor::RED] = redBlockSprite;
     
     /***        
         BEGIN EVENT LOOP
@@ -411,8 +415,11 @@ int main(int argc, char** argv){
         
         // check for actions that will quit the program 
         if(SDL_PollEvent(&event)){
+            int screenWidth, screenHeight;
+            SDL_GetRendererOutputSize(renderer, &screenWidth, &screenHeight);
+            
             switch(event.type){
-                /* clicking on the X button on top right of screen */
+                // clicking on the X button on top right of screen
                 case SDL_QUIT:
                     quit = true;
                     break;
@@ -428,7 +435,11 @@ int main(int argc, char** argv){
                             break;
                         case SDLK_r:
                             // rotate the current tetromino
-                            // TODO: bug - if orientation is up and at the edge, rotation should not be possible
+                            // if orientation is up and at the edge, rotation should not be possible
+                            if(currTetro.orientation == Orientation::UP && 
+                               currTetro.pos.x == screenWidth - blockSize){
+                                break;
+                            }
                             updateOrientation(currTetro);
                             break;
                         case SDLK_LEFT:
@@ -437,19 +448,20 @@ int main(int argc, char** argv){
                             }
                             break;
                         case SDLK_RIGHT:
-                            // TODO: since the renderer's width is larger than what I asked for,
-                            // query the renderer for the actual dimensions?
-                            int screenWidth, screenHeight;
-                            SDL_GetRendererOutputSize(renderer, &screenWidth, &screenHeight);
+                            int gridX = (currTetro.pos.x + blockSize) / blockSize;
+                            int gridY = (currTetro.pos.y + blockSize) / blockSize;
                             
-                            if(currTetro.configuration == TetrominoType::STRAIGHT &&
+                            if(
+                                currTetro.configuration == TetrominoType::STRAIGHT &&
                                 currTetro.orientation == Orientation::LEFT &&
-                                currTetro.pos.x + blockSize <= screenWidth - (blockSize*4)){
+                                currTetro.pos.x + blockSize <= screenWidth - (blockSize*4) &&
+                                !grid.cells[gridY][gridX].hasBlock){ // TODO: this hasBlock check doesn't seem to be working
                                     currTetro.pos.x += blockSize;
                             }else if(
                                 currTetro.configuration == TetrominoType::STRAIGHT &&
                                 currTetro.orientation == Orientation::UP &&
-                                currTetro.pos.x + blockSize <= screenWidth - blockSize){
+                                currTetro.pos.x + blockSize <= screenWidth - blockSize &&
+                                !grid.cells[gridY][gridX].hasBlock){
                                     currTetro.pos.x += blockSize;
                             }
                             break;
@@ -473,8 +485,12 @@ int main(int argc, char** argv){
     
     // cleanup
     SDL_DestroyTexture(bg);
-    SDL_DestroyTexture(blueBlockSprite);
-    SDL_DestroyTexture(greenBlockSprite);
+    
+    for(std::pair<BlockColor, SDL_Texture*> kv : blockMap){
+        std::cout << "deleting block texture...\n";
+        SDL_DestroyTexture(kv.second);
+    }
+    
     SDL_Quit();
     return 0;
 }

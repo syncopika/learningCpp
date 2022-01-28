@@ -29,6 +29,7 @@ previous tetrominos.
 TODO:
     - implement rotations (absolutely necessary to get a full row)
     - implement different tetromino configurations
+    - end game when there's no more room to move (I think it might just segfault at the moment lol)
     - BUG: tetrominos can collide with already placed ones -> I think the check for hasBlock is mostly working
            when moving right (still might not be correct), and currently not implemented for moving left
     - figure out what happens when there's no more room to move
@@ -49,12 +50,11 @@ TODO:
 #include <vector>
 
 // TODO: make these #define ?
-const int gridWidth = 12;
-const int gridHeight = 30; //50
-const int blockSize = 5; // 5px x 5px
-const int rowWidth = (120/blockSize); // use this for now until we figure out the width weirdness.
+const int gridWidth = 15;
+const int gridHeight = 40;
+const int blockSize = 5; // 5px x 5px blocks
 
-const int SCREEN_WIDTH = gridWidth * blockSize; // TODO: figure out why I can't seem to get the actual screen width smaller than 120 :/
+const int SCREEN_WIDTH = gridWidth * blockSize;
 const int SCREEN_HEIGHT = gridHeight * blockSize;
 
 static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start;
@@ -81,14 +81,11 @@ struct GridCell {
 };
 
 struct Grid {
-    // TODO: since the renderer's width is larger than what I asked for (DPI-related?),
-    // query the renderer for the actual dimensions?
-    // also: maybe just use std::vector so we don't have to know dimensions ahead of time?
-    GridCell cells[gridHeight][rowWidth];
+    GridCell cells[gridHeight][gridWidth];
     
     void initGrid(){
         for(int i = 0; i < gridHeight; i++){
-            for(int j = 0; j < rowWidth; j++){ // 120 is currently what is set for the width per the renderer
+            for(int j = 0; j < gridWidth; j++){
                 cells[i][j] = GridCell{false, nullptr};
             }
         }
@@ -103,7 +100,7 @@ struct Grid {
         
         for(int i = 1; i < gridHeight; i++){
             bool isFullRow = true;
-            for(int j = 0; j < rowWidth; j++){
+            for(int j = 0; j < gridWidth; j++){
                 isFullRow = isFullRow && cells[i][j].hasBlock;
             }
             if(isFullRow) fullRows.push_back(i); // record the index of the full row
@@ -114,7 +111,7 @@ struct Grid {
         //std::cout << "num full rows: " << numFullRows << '\n';
         if(numFullRows > 0){
             for(int i = fullRows[0]; i <= fullRows.back(); i++){
-                for(int j = 0; j < rowWidth; j++){
+                for(int j = 0; j < gridWidth; j++){
                     cells[i][j].hasBlock = false;
                     cells[i][j].sprite = nullptr;
                 }
@@ -123,7 +120,7 @@ struct Grid {
             // only need to move prev row up if curr row is > 0
             for(int i = fullRows[0]-1; i >= 0; i--){
                 int newRowIndex = i + numFullRows;
-                for(int j = 0; j < rowWidth; j++){
+                for(int j = 0; j < gridWidth; j++){
                     // move everything down
                     cells[newRowIndex][j].hasBlock = cells[i][j].hasBlock;
                     cells[newRowIndex][j].sprite = cells[i][j].sprite;
@@ -138,7 +135,7 @@ struct Grid {
     
     void render(SDL_Renderer *ren){
         for(int i = 0; i < gridHeight; i++){
-            for(int j = 0; j < rowWidth; j++){
+            for(int j = 0; j < gridWidth; j++){
                 GridCell& c = cells[i][j];
                 if(c.hasBlock != false){
                     SDL_Texture* blockSprite = c.sprite;
@@ -347,9 +344,12 @@ int main(int argc, char** argv){
         return 1;
     }
     
-    // create a window 
-    std::cout << "SCREEN_WIDTH: " << SCREEN_WIDTH << '\n';
-    SDL_Window *window = SDL_CreateWindow("tetris", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    std::cout << "press 'esc' to quit\n"; 
+    //std::cout << "SCREEN_WIDTH: " << SCREEN_WIDTH << '\n';
+    
+    // seems to need to be borderless in order to actually get the screen width whatever I specified
+    SDL_Window *window = SDL_CreateWindow("tetris", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_BORDERLESS);
+    
     if(window == nullptr){
         logSDLError(std::cout, "SDL_CreateWindow Error: ");
         SDL_Quit();
@@ -359,7 +359,7 @@ int main(int argc, char** argv){
     int ww;
     int wh;
     SDL_GetWindowSize(window, &ww, &wh);
-    std::cout << "window width in pixels: " << ww << ", window height in pixels: " << wh << '\n'; 
+    //std::cout << "window width in pixels: " << ww << ", window height in pixels: " << wh << '\n'; 
     
     // create the renderer to render the window with 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -370,7 +370,7 @@ int main(int argc, char** argv){
         return 1;
     }
     
-    std::cout << "renderer width in pixels: " << ww << ", window height in pixels: " << wh << '\n'; 
+    //std::cout << "renderer width in pixels: " << ww << ", window height in pixels: " << wh << '\n'; 
     SDL_GetRendererOutputSize(renderer, &ww, &wh);
     
     // initialize random seed

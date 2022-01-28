@@ -14,7 +14,7 @@ note: make sure to have SDL2.dll in the same directory as the excutables when ru
 **ppm_viewer**: a .ppm image file viewer! useful when working on "Raytracing in One Weekend".    
 ![screenshot of ppm viewer](screenshots/ppm_viewer.png)    
     
-**tetris_clone**: an attempt at recreating tetris    
+**tetris_clone**: an attempt at recreating tetris. it's still very incomplete but kinda works as you'd expect.    
 ![screenshot of tetris clone](screenshots/tetris_clone.gif)    
     
     

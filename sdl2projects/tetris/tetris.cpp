@@ -59,10 +59,6 @@ const int SCREEN_HEIGHT = gridHeight * blockSize;
 
 static std::chrono::time_point <std::chrono::steady_clock, std::chrono::milliseconds> start;
 
-void logSDLError(std::ostream &os, const std::string &msg){
-    os << msg << " error: " << SDL_GetError() << std::endl;
-}
-
 double getTimeElapsed(){
     // https://stackoverflow.com/questions/31487876/getting-a-time-difference-in-milliseconds
     // https://stackoverflow.com/questions/728068/how-to-calculate-a-time-difference-in-c
@@ -276,6 +272,10 @@ struct Tetromino {
     }
 };
 
+void logSDLError(std::ostream &os, const std::string &msg){
+    os << msg << " error: " << SDL_GetError() << std::endl;
+}
+
 SDL_Texture* loadTexture(const std::string& file, SDL_Renderer *ren){
     // initialize texture to null first 
     SDL_Texture *texture = nullptr;
@@ -326,6 +326,18 @@ void updateOrientation(Tetromino& currTetro){
         }else{
             currTetro.orientation = Orientation::LEFT;
         }
+    }
+}
+
+void drawGridLines(SDL_Renderer* renderer){
+    SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
+    
+    for(int i = 0; i <= SCREEN_WIDTH - blockSize; i += blockSize){
+        SDL_RenderDrawLine(renderer, i, 0, i, SCREEN_HEIGHT);
+    }
+    
+    for(int j = 0; j <= SCREEN_HEIGHT - blockSize; j += blockSize){
+        SDL_RenderDrawLine(renderer, 0, j, SCREEN_WIDTH, j);
     }
 }
 
@@ -411,7 +423,9 @@ int main(int argc, char** argv){
     grid.initGrid();
     
     while(!quit){
-        SDL_RenderClear(renderer); // clear the frame
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_RenderClear(renderer); // clear the frame (make #000)
+        drawGridLines(renderer);
         
         // check for actions that will quit the program 
         if(SDL_PollEvent(&event)){

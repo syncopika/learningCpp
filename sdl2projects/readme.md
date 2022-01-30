@@ -17,6 +17,8 @@ note: make sure to have SDL2.dll in the same directory as the excutables when ru
 **tetris_clone**: an attempt at recreating tetris. it's still very incomplete but kinda works as you'd expect.    
 ![screenshot of tetris clone](screenshots/tetris_clone.gif)    
     
+**Conway's Game of Life**: an implementation of John Conway's Game of Life.    
+![screenshot of Conway's Game of Life](screenshots/game-of-life.gif)    
     
 resources I thought were helpful:    
 http://www.willusher.io/pages/sdl2/    

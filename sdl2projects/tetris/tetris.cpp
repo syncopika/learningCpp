@@ -48,11 +48,12 @@ TODO:
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <random>
 
 // TODO: make these #define ?
-const int gridWidth = 15;
+const int gridWidth = 10;
 const int gridHeight = 40;
-const int blockSize = 5; // 5px x 5px blocks
+const int blockSize = 10; // 10px x 10px blocks
 
 const int SCREEN_WIDTH = gridWidth * blockSize;
 const int SCREEN_HEIGHT = gridHeight * blockSize;
@@ -140,13 +141,16 @@ struct Grid {
                 if(c.hasBlock != false){
                     SDL_Texture* blockSprite = c.sprite;
                     SDL_Rect dst;
+                    dst.w = blockSize;
+                    dst.h = blockSize;
                     dst.x = j * blockSize;
                     dst.y = i * blockSize;
-                    SDL_QueryTexture(blockSprite, nullptr, nullptr, &dst.w, &dst.h); 
+                    
+                    // copy block sprite texture based on dst dimensions and put it on the rendered grid
                     SDL_RenderCopyEx(ren, blockSprite, nullptr, &dst, 0, nullptr, SDL_FLIP_NONE);
                 }
             }
-        }        
+        }
     }
 };
 
@@ -184,6 +188,18 @@ struct Tetromino {
             currPosY >= SCREEN_HEIGHT - blockSize*4){
                 pos.y = SCREEN_HEIGHT - blockSize*4;
                 return false;
+        }else if(
+            configuration == TetrominoType::STRAIGHT &&
+            orientation == Orientation::DOWN && 
+            currPosY >= SCREEN_HEIGHT - blockSize){
+                pos.y = SCREEN_HEIGHT - blockSize;
+                return false;
+        }else if(
+            configuration == TetrominoType::STRAIGHT &&
+            orientation == Orientation::RIGHT && 
+            currPosY >= SCREEN_HEIGHT - blockSize){
+                pos.y = SCREEN_HEIGHT - blockSize;
+                return false;
         }else{
             // can move
             for(int i = 0; i < 4; i++){
@@ -193,9 +209,15 @@ struct Tetromino {
                 
                 if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::LEFT)
                     currPosX += blockSize;
+                  
+                if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::RIGHT)
+                    currPosX -= blockSize;
                 
                 if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::UP)
                     currPosY += blockSize;
+                  
+                if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::DOWN)
+                    currPosY -= blockSize;
             }
             return canPlace;
         }
@@ -219,50 +241,60 @@ struct Tetromino {
             
             if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::UP)
                 currPosY += blockSize;
+              
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::RIGHT)
+                currPosX -= blockSize;
+              
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::DOWN)
+                currPosY -= blockSize;
         }
     }
     
-    void reset(std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
+    void reset(std::unordered_map<BlockColor, SDL_Texture*>& blockMap, std::uniform_int_distribution<int>& distr, std::mt19937& generator){
         // this block has reached an end so start over and change the tetromino type
         // TODO: assign random configuration, orientation
-        pos.x = 20;
+        int randX = distr(generator);
+        pos.x = randX - randX % 10; // https://stackoverflow.com/questions/15154457/rounding-integers-to-nearest-multiple-of-10
         pos.y = -blockSize * 2;
         blockSprite = blockMap[BlockColor(rand()%3)]; // only 3 colors right now
     }
     
-    // maybe pass in the grid to check if this
-    // tetromino should stop moving
-    void render(SDL_Renderer *ren, Grid& grid, std::unordered_map<BlockColor, SDL_Texture*>& blockMap){
+    void render(SDL_Renderer *ren, Grid& grid, std::unordered_map<BlockColor, SDL_Texture*>& blockMap, std::uniform_int_distribution<int>& distr, std::mt19937& generator){
         // this should be if this tetromino can't move further downwards
         // TODO: should this really be here? kinda funny it belongs to Tetromino?
         if(gridCheck(grid) == false){
             //std::cout << "stop moving\n";
             markGrid(grid);
             grid.checkFullRows(); // remove any full rows and move prev rows down
-            reset(blockMap);
+            reset(blockMap, distr, generator);
             return;
         }
         
-        // show 4 blocks in a row based on pos
-        // but what about rotation?
+        // draw the tetromino
         int currPosX = pos.x;
         int currPosY = pos.y;
         
         for(int i = 0; i < 4; i++){
             SDL_Rect dst;
+            dst.w = blockSize;
+            dst.h = blockSize;
             dst.x = currPosX;
             dst.y = currPosY;
         
-            // query the texture to get the width and height 
-            // the rectangle will take on the width and height of the texture 
-            SDL_QueryTexture(blockSprite, nullptr, nullptr, &dst.w, &dst.h); 
+            // copy block sprite texture based on dst dimensions and put it on the rendered grid
             SDL_RenderCopyEx(ren, blockSprite, nullptr, &dst, 0, nullptr, SDL_FLIP_NONE);
             
             if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::LEFT)
                 currPosX += blockSize;
+              
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::RIGHT)
+                currPosX -= blockSize;
             
             if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::UP)
                 currPosY += blockSize;
+              
+            if(configuration == TetrominoType::STRAIGHT && orientation == Orientation::DOWN)
+                currPosY -= blockSize;
         }
         
         pos.y += speed;
@@ -320,10 +352,16 @@ void updateOrientation(Tetromino& currTetro){
     if(currTetro.configuration == TetrominoType::STRAIGHT){
         if(currTetro.orientation == Orientation::LEFT){
             currTetro.orientation = Orientation::UP;
-        }else{
+        }else if(currTetro.orientation == Orientation::UP){
+            currTetro.orientation = Orientation::RIGHT;
+        }else if(currTetro.orientation == Orientation::RIGHT){
+            currTetro.orientation = Orientation::DOWN;
+        }else if(currTetro.orientation == Orientation::DOWN){
             currTetro.orientation = Orientation::LEFT;
         }
     }
+    
+    // TODO: handle other tetromino types
 }
 
 void drawGridLines(SDL_Renderer* renderer){
@@ -376,6 +414,11 @@ int main(int argc, char** argv){
     // initialize random seed
     srand(time(nullptr));
     
+    // https://stackoverflow.com/questions/7560114/random-number-c-in-some-range
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distr(30, SCREEN_WIDTH - 50);
+    
     /***
         set up background
     ***/
@@ -410,13 +453,14 @@ int main(int argc, char** argv){
     blockMap[BlockColor::GREEN] = greenBlockSprite;
     blockMap[BlockColor::RED] = redBlockSprite;
     
-    /***        
+    /***
         BEGIN EVENT LOOP
     ***/
-    bool quit = false; 
+    bool quit = false;
     SDL_Event event;
     
-    Vec2 pos{10, -2};
+    int randX = distr(gen);
+    Vec2 pos{randX - randX % 10, -2};
     Tetromino currTetro{pos, 1, TetrominoType::STRAIGHT, Orientation::LEFT, blueBlockSprite};
     
     Grid grid;
@@ -442,6 +486,8 @@ int main(int argc, char** argv){
                 // we're avoiding SDL_GetKeyboardState because that registers multiples events for a single button press
                 // which we don't want in this case
                 case SDL_KEYDOWN:
+                    int gridX = (currTetro.pos.x + blockSize) / blockSize;
+                    int gridY = (currTetro.pos.y + blockSize) / blockSize;
                     switch (event.key.keysym.sym){
                         case SDLK_ESCAPE:
                         case SDLK_q:
@@ -450,21 +496,45 @@ int main(int argc, char** argv){
                         case SDLK_r:
                             // rotate the current tetromino
                             // if orientation is up and at the edge, rotation should not be possible
-                            if(currTetro.orientation == Orientation::UP && 
+                            if(currTetro.configuration == TetrominoType::STRAIGHT &&
+                               currTetro.orientation == Orientation::UP && 
                                currTetro.pos.x == screenWidth - blockSize){
                                 break;
+                            }
+                            if(currTetro.configuration == TetrominoType::STRAIGHT &&
+                               currTetro.orientation == Orientation::UP &&
+                               (currTetro.pos.x - (blockSize*3) < 0 ||
+                               grid.cells[gridY][gridX].hasBlock)){
+                                 // if trying to rotate to the right orientation (and currently in up orientation),
+                                 // make sure there's enough room to rotate
+                                 break;
+                            }
+                            if(currTetro.configuration == TetrominoType::STRAIGHT &&
+                               currTetro.orientation == Orientation::DOWN && 
+                               (currTetro.pos.x + (blockSize*3) >= screenWidth ||
+                               grid.cells[gridY][gridX].hasBlock)){
+                                 // if trying to rotate to the left orientation
+                                 break;
                             }
                             updateOrientation(currTetro);
                             break;
                         case SDLK_LEFT:
-                            if(currTetro.pos.x - blockSize >= 0){
-                                currTetro.pos.x -= blockSize;
+                            if(
+                                currTetro.configuration == TetrominoType::STRAIGHT &&
+                                currTetro.orientation == Orientation::RIGHT &&
+                                currTetro.pos.x - blockSize >= blockSize*3 &&
+                                !grid.cells[gridY][gridX].hasBlock){
+                                    // make sure we have enough space to move a full tetromino to the left
+                                    currTetro.pos.x -= blockSize;
+                            }else if(
+                                currTetro.configuration == TetrominoType::STRAIGHT &&
+                                currTetro.orientation != Orientation::RIGHT &&
+                                currTetro.pos.x - blockSize >= 0 &&
+                                !grid.cells[gridY][gridX].hasBlock){
+                                   currTetro.pos.x -= blockSize;
                             }
                             break;
                         case SDLK_RIGHT:
-                            int gridX = (currTetro.pos.x + blockSize) / blockSize;
-                            int gridY = (currTetro.pos.y + blockSize) / blockSize;
-                            
                             if(
                                 currTetro.configuration == TetrominoType::STRAIGHT &&
                                 currTetro.orientation == Orientation::LEFT &&
@@ -473,7 +543,19 @@ int main(int argc, char** argv){
                                     currTetro.pos.x += blockSize;
                             }else if(
                                 currTetro.configuration == TetrominoType::STRAIGHT &&
+                                currTetro.orientation == Orientation::RIGHT &&
+                                currTetro.pos.x + blockSize <= screenWidth - blockSize &&
+                                !grid.cells[gridY][gridX].hasBlock){
+                                    currTetro.pos.x += blockSize;
+                            }else if(
+                                currTetro.configuration == TetrominoType::STRAIGHT &&
                                 currTetro.orientation == Orientation::UP &&
+                                currTetro.pos.x + blockSize <= screenWidth - blockSize &&
+                                !grid.cells[gridY][gridX].hasBlock){
+                                    currTetro.pos.x += blockSize;
+                            }else if(
+                                currTetro.configuration == TetrominoType::STRAIGHT &&
+                                currTetro.orientation == Orientation::DOWN &&
                                 currTetro.pos.x + blockSize <= screenWidth - blockSize &&
                                 !grid.cells[gridY][gridX].hasBlock){
                                     currTetro.pos.x += blockSize;
@@ -488,7 +570,7 @@ int main(int argc, char** argv){
         renderTexture(bg, renderer, 0, 0, 0);
         
         // update player's current tetromino position
-        currTetro.render(renderer, grid, blockMap);
+        currTetro.render(renderer, grid, blockMap, distr, gen);
         
         // render all the blocks currently in place on the grid
         grid.render(renderer);

@@ -48,26 +48,28 @@ struct Grid {
     GridCell grid[gridHeight][gridWidth];
     
     void initGrid(SDL_Texture* blockSprite){
+        int cellHeight = (gridHeight/3);
+        int cellWidth = (gridWidth/4);
         for(int i = 0; i < gridHeight; i++){
             for(int j = 0; j < gridWidth; j++){
-                if((i == (gridHeight/3) && j == (gridWidth/4)) ||
-                   (i == (gridHeight/3)+1 && j == (gridWidth/4)) ||
-                   (i == (gridHeight/3)+2 && j == (gridWidth/4)) ||
-                   (i == (gridHeight/3)+1 && j == (gridWidth/4)+3) ||
-                   (i == (gridHeight/3)+3 && j >= (gridWidth/4)+4) ||
-                   (i == (gridHeight/3)+1 && j == (gridWidth/4)+5) ||
-                   (i == (gridHeight/3)+3 && j == (gridWidth/4)+6) ||
-                   (i == (gridHeight/3)+2 && j == (gridWidth/4)+3) ||
-                   (i == (gridHeight/3)+3 && j == (gridWidth/4)+4) ||
-                   (i == (gridHeight/3) && j == (gridWidth/4)+6) ||
-                   (i == (gridHeight/3)-1 && j == (gridWidth/4)+6) ||
-                   (i == (gridHeight/3) && j == (gridWidth/4)-2) ||
-                   (i == (gridHeight/3)-2 && j == (gridWidth/4)+3) ||
-                   (i == (gridHeight/3)-5 && j == (gridWidth/4)+2) ||
-                   (i == (gridHeight/3) && j == (gridWidth/4)+2) ||
-                   (i >= (gridHeight/3)-2 && j == (gridWidth/4)+5) ||
-                   (i == (gridHeight/3)-4 && j == (gridWidth/4)+3) ||
-                   (i == (gridHeight/3)-4 && j == (gridWidth/4)-5)
+                if((i == cellHeight && j == cellWidth) ||
+                   (i == cellHeight+1 && j == cellWidth) ||
+                   (i == cellHeight+2 && j == cellWidth) ||
+                   (i == cellHeight+1 && j == cellWidth+3) ||
+                   (i == cellHeight+3 && j >= cellWidth+4) ||
+                   (i == cellHeight+1 && j == cellWidth+5) ||
+                   (i == cellHeight+3 && j == cellWidth+6) ||
+                   (i == cellHeight+2 && j == cellWidth+3) ||
+                   (i == cellHeight+3 && j == cellWidth+4) ||
+                   (i == cellHeight && j == cellWidth+6) ||
+                   (i == cellHeight-1 && j == cellWidth+6) ||
+                   (i == cellHeight && j == cellWidth-2) ||
+                   (i == cellHeight-2 && j == cellWidth+3) ||
+                   (i == cellHeight-5 && j == cellWidth+2) ||
+                   (i == cellHeight && j == cellWidth+2) ||
+                   (i >= cellHeight-2 && j == cellWidth+5) ||
+                   (i == cellHeight-4 && j == cellWidth+3) ||
+                   (i == cellHeight-4 && j == cellWidth-5)
                    ){
                     grid[i][j].isAlive = true;
                     grid[i][j].sprite = blockSprite;
